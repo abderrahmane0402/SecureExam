@@ -9,8 +9,6 @@ import {
 
 export type Language = 'en' | 'fr';
 
-type TranslationKey = keyof typeof translations.en;
-
 const translations = {
     en: {
         // Navigation
@@ -177,6 +175,144 @@ const translations = {
 
         // Footer
         'footer.copyright': 'Secure Exam System. All rights reserved.',
+
+        // Exams - Common
+        'exam.duration': 'Duration',
+        'exam.minutes': 'minutes',
+        'exam.questions': 'Questions',
+        'exam.points': 'points',
+        'exam.attempts': 'Attempts',
+        'exam.used': 'used',
+        'exam.of': 'of',
+        'exam.availableUntil': 'Available Until',
+        'exam.status.inProgress': 'In Progress',
+        'exam.status.submitted': 'Submitted',
+        'exam.status.autoSubmitted': 'Auto-Submitted',
+        'exam.status.graded': 'Graded',
+        'exam.status.upcoming': 'Upcoming',
+        'exam.status.ended': 'Ended',
+        'exam.status.available': 'Available',
+        'exam.violations': 'violations',
+        'exam.securityViolation': 'Security violation detected!',
+
+        // Exams - Student List
+        'student.exams.title': 'My Exams',
+        'student.exams.subtitle': 'View and take your assigned exams',
+        'student.exams.available': 'Available Exams',
+        'student.exams.completed': 'Completed Exams',
+        'student.exams.none': "You don't have any assigned exams yet.",
+        'student.exams.noAvailable': 'No exams available at this time.',
+        'student.exams.continue': 'Continue',
+        'student.exams.start': 'Start',
+        'student.exams.viewResults': 'View Results',
+        'student.exams.awaitingGrade': 'Awaiting grade',
+        'student.exams.noAttempts': 'No attempts left',
+
+        // Exams - Student Show
+        'student.exam.info': 'Exam Information',
+        'student.exam.rules': 'Important Rules',
+        'student.exam.rule.fullscreen': 'The exam will run in fullscreen mode. Exiting fullscreen will be logged as a violation.',
+        'student.exam.rule.tabs': 'Tab switching and window focus loss will be detected and logged.',
+        'student.exam.rule.copyPaste': 'Copy, paste, and right-click are disabled during the exam.',
+        'student.exam.rule.autoSubmit': 'Multiple violations may result in automatic submission of your exam.',
+        'student.exam.rule.autoSave': 'Your answers are auto-saved, but make sure to submit before time runs out.',
+        'student.exam.attempts': 'Your Attempts',
+        'student.exam.attemptNumber': 'Attempt',
+        'student.exam.inProgressDesc': 'You have an exam in progress.',
+        'student.exam.acknowledge': 'I understand the exam rules and that my activity will be monitored. I am ready to start the exam.',
+        'student.exam.starting': 'Starting...',
+        'student.exam.notAvailable': 'This exam is not currently available.',
+        'student.exam.allAttemptsUsed': 'You have used all your attempts for this exam.',
+
+        // Exams - Taking
+        'exam.take.beforeYouBegin': 'Before you begin:',
+        'exam.take.rule1': 'This exam will open in fullscreen mode',
+        'exam.take.rule2': 'Do not switch tabs, windows, or exit fullscreen',
+        'exam.take.rule3': 'Copy, paste, and right-click are disabled',
+        'exam.take.rule4': 'Violations will be recorded and may result in automatic submission',
+        'exam.take.rule5': 'Time limit:',
+        'exam.take.start': 'Start Exam',
+        'exam.take.locked': 'Exam Locked',
+        'exam.take.lockedReason': 'Your exam timer is still running. Click below to return to fullscreen and continue your exam.',
+        'exam.take.returnWithin': 'Please return to fullscreen within {0} seconds to avoid automatic submission.',
+        'exam.take.return': 'Return to Exam',
+        'exam.take.saving': 'Saving...',
+        'exam.take.fullscreen': 'Fullscreen',
+        'exam.take.submit': 'Submit Exam',
+        'exam.take.answered': 'Answered',
+        'exam.take.notAnswered': 'Not answered',
+        'exam.take.flaggedDesc': 'Flagged for review',
+        'exam.take.question': 'Question',
+        'exam.take.flag': 'Flag',
+        'exam.take.unflag': 'Unflag',
+        'exam.take.selectMultiple': 'Select all that apply',
+        'exam.take.shortTextPlaceholder': 'Type your answer here...',
+        'exam.take.essayPlaceholder': 'Write your answer here...',
+        'exam.take.previous': 'Previous',
+        'exam.take.next': 'Next',
+        'exam.take.confirmTitle': 'Submit Exam?',
+        'exam.take.confirmDesc': 'Are you sure you want to submit your exam? You cannot change your answers after submission.',
+        'exam.take.confirmStats': 'You have answered {0} of {1} questions.',
+
+        // Monitor - General
+        'monitor.title': 'Monitor Exam',
+        'monitor.subtitle': 'Real-time exam tracking and security dashboard',
+        'monitor.live': 'Live',
+        'monitor.autoRefresh': 'Auto-refresh',
+        'monitor.refresh': 'Refresh',
+        'monitor.totalAssigned': 'Total Assigned',
+        'monitor.inProgress': 'In Progress',
+        'monitor.completed': 'Completed',
+        'monitor.notStarted': 'Not Started',
+        'monitor.activeStudents': 'Active Students',
+        'monitor.activeStudentsDesc': 'Students currently taking the exam',
+        'monitor.recentViolations': 'Recent Violations',
+        'monitor.recentViolationsDesc': 'Last security events detected',
+        'monitor.studentAttempts': 'Student Attempts',
+        'monitor.studentAttemptsDesc': 'Manage all exam attempts',
+        'monitor.noActive': 'No students currently taking the exam.',
+        'monitor.noViolations': 'No violations recorded yet.',
+        'monitor.noAttempts': 'No attempts yet.',
+        'monitor.lastActivity': 'Last activity',
+        'monitor.answered': 'answered',
+        'monitor.ago': 'ago',
+        'monitor.secShort': 's',
+        'monitor.minShort': 'm',
+        'monitor.hourShort': 'h',
+
+        // Monitor - Actions
+        'monitor.action.reset': 'Reset Attempt',
+        'monitor.action.resetDesc': 'The student will be able to retake the exam.',
+        'monitor.action.delete': 'Delete Attempt',
+        'monitor.action.deleteDesc': 'This will permanently remove the student\'s progress.',
+        'monitor.action.clearViolations': 'Clear Violations',
+        'monitor.action.clearViolationsDesc': 'Remove all security alerts for this student.',
+        'monitor.action.forceSubmit': 'Force Submit',
+        'monitor.action.viewLog': 'View Log',
+
+        // Violations - User Friendly Explanations
+        'violation.tab_switch': 'Switched Tab',
+        'violation.tab_switch.desc': 'The student switched to another browser tab.',
+        'violation.window_blur': 'Left Exam Window',
+        'violation.window_blur.desc': 'The student clicked outside the browser window.',
+        'violation.fullscreen_exit': 'Exited Fullscreen',
+        'violation.fullscreen_exit.desc': 'The student left the mandatory fullscreen mode.',
+        'violation.copy': 'Attempted Copy',
+        'violation.copy.desc': 'The student tried to copy text from the exam.',
+        'violation.paste': 'Attempted Paste',
+        'violation.paste.desc': 'The student tried to paste text into an answer.',
+        'violation.right_click': 'Right-Click Attempt',
+        'violation.right_click.desc': 'The student tried to use the context menu.',
+        'violation.multiple_tabs': 'Multiple Tabs Open',
+        'violation.multiple_tabs.desc': 'The student has more than one tab open for this exam.',
+        'violation.devtools': 'Developer Tools',
+        'violation.devtools.desc': 'The student tried to open browser developer tools.',
+        'violation.view_source': 'View Source',
+        'violation.view_source.desc': 'The student tried to view the page source code.',
+        'violation.reload_delay': 'Delayed Return After Reload',
+        'violation.reload_delay.desc': 'The student took too long to return to fullscreen after reloading the page.',
+        'violation.away_timeout': 'Away for too long',
+        'violation.away_timeout.desc': 'Student was away from the exam for more than 15 seconds.',
     },
     fr: {
         // Navigation
@@ -353,10 +489,149 @@ const translations = {
         'cta.button': 'Créer Votre Compte',
 
         // Footer
-        'footer.copyright':
-            "Système d'Examen Sécurisé. Tous droits réservés.",
+        'footer.copyright': "Système d'Examen Sécurisé. Tous droits réservés.",
+
+        // Exams - Common
+        'exam.duration': 'Durée',
+        'exam.minutes': 'minutes',
+        'exam.questions': 'Questions',
+        'exam.points': 'points',
+        'exam.attempts': 'Tentatives',
+        'exam.used': 'utilisées',
+        'exam.of': 'sur',
+        'exam.availableUntil': 'Disponible jusqu’au',
+        'exam.status.inProgress': 'En cours',
+        'exam.status.submitted': 'Soumis',
+        'exam.status.autoSubmitted': 'Soumission auto',
+        'exam.status.graded': 'Noté',
+        'exam.status.upcoming': 'À venir',
+        'exam.status.ended': 'Terminé',
+        'exam.status.available': 'Disponible',
+        'exam.violations': 'violations',
+        'exam.securityViolation': 'Violation de sécurité détectée !',
+
+        // Exams - Student List
+        'student.exams.title': 'Mes Examens',
+        'student.exams.subtitle': 'Consultez et passez vos examens assignés',
+        'student.exams.available': 'Examens Disponibles',
+        'student.exams.completed': 'Examens Terminés',
+        'student.exams.none': 'Vous n’avez pas encore d’examens assignés.',
+        'student.exams.noAvailable': 'Aucun examen disponible pour le moment.',
+        'student.exams.continue': 'Continuer',
+        'student.exams.start': 'Commencer',
+        'student.exams.viewResults': 'Voir les Résultats',
+        'student.exams.awaitingGrade': 'En attente de notation',
+        'student.exams.noAttempts': 'Plus de tentatives restantes',
+
+        // Exams - Student Show
+        'student.exam.info': 'Informations sur l’Examen',
+        'student.exam.rules': 'Règles Importantes',
+        'student.exam.rule.fullscreen': 'L’examen se déroulera en mode plein écran. Sortir du mode plein écran sera enregistré comme une violation.',
+        'student.exam.rule.tabs': 'Le changement d’onglet et la perte de focus de la fenêtre seront détectés et enregistrés.',
+        'student.exam.rule.copyPaste': 'Le copier-coller et le clic droit sont désactivés pendant l’examen.',
+        'student.exam.rule.autoSubmit': 'Plusieurs violations peuvent entraîner la soumission automatique de votre examen.',
+        'student.exam.rule.autoSave': 'Vos réponses sont sauvegardées automatiquement, mais assurez-vous de soumettre avant la fin du temps.',
+        'student.exam.attempts': 'Vos Tentatives',
+        'student.exam.attemptNumber': 'Tentative',
+        'student.exam.inProgressDesc': 'Vous avez un examen en cours.',
+        'student.exam.acknowledge': 'Je comprends les règles de l’examen et que mon activité sera surveillée. Je suis prêt à commencer.',
+        'student.exam.starting': 'Démarrage...',
+        'student.exam.notAvailable': 'Cet examen n’est pas disponible actuellement.',
+        'student.exam.allAttemptsUsed': 'Vous avez utilisé toutes vos tentatives pour cet examen.',
+
+        // Exams - Taking
+        'exam.take.beforeYouBegin': 'Avant de commencer :',
+        'exam.take.rule1': 'Cet examen s’ouvrira en mode plein écran',
+        'exam.take.rule2': 'Ne changez pas d’onglet, de fenêtre et ne quittez pas le plein écran',
+        'exam.take.rule3': 'Le copier-coller et le clic droit sont désactivés',
+        'exam.take.rule4': 'Les violations seront enregistrées et peuvent entraîner une soumission automatique',
+        'exam.take.rule5': 'Limite de temps :',
+        'exam.take.start': 'Commencer l’Examen',
+        'exam.take.locked': 'Examen Verrouillé',
+        'exam.take.lockedReason': 'Le minuteur de votre examen tourne toujours. Cliquez ci-dessous pour revenir en plein écran et continuer votre examen.',
+        'exam.take.returnWithin': 'Veuillez revenir en plein écran dans {0} secondes pour éviter la soumission automatique.',
+        'exam.take.return': 'Retourner à l’Examen',
+        'exam.take.saving': 'Enregistrement...',
+        'exam.take.fullscreen': 'Plein écran',
+        'exam.take.submit': 'Soumettre l’Examen',
+        'exam.take.answered': 'Répondu',
+        'exam.take.notAnswered': 'Pas répondu',
+        'exam.take.flaggedDesc': 'Marqué pour révision',
+        'exam.take.question': 'Question',
+        'exam.take.flag': 'Marquer',
+        'exam.take.unflag': 'Démarquer',
+        'exam.take.selectMultiple': 'Sélectionnez tout ce qui s’applique',
+        'exam.take.shortTextPlaceholder': 'Tapez votre réponse ici...',
+        'exam.take.essayPlaceholder': 'Écrivez votre réponse ici...',
+        'exam.take.previous': 'Précédent',
+        'exam.take.next': 'Suivant',
+        'exam.take.confirmTitle': 'Soumettre l’Examen ?',
+        'exam.take.confirmDesc': 'Êtes-vous sûr de vouloir soumettre votre examen ? Vous ne pourrez plus modifier vos réponses après la soumission.',
+        'exam.take.confirmStats': 'Vous avez répondu à {0} questions sur {1}.',
+
+        // Monitor - General
+        'monitor.title': 'Surveiller l\'Examen',
+        'monitor.subtitle': 'Suivi en temps réel et tableau de bord de sécurité',
+        'monitor.live': 'En direct',
+        'monitor.autoRefresh': 'Auto-actualisation',
+        'monitor.refresh': 'Actualiser',
+        'monitor.totalAssigned': 'Total Assignés',
+        'monitor.inProgress': 'En cours',
+        'monitor.completed': 'Terminés',
+        'monitor.notStarted': 'Pas commencés',
+        'monitor.activeStudents': 'Étudiants Actifs',
+        'monitor.activeStudentsDesc': 'Étudiants passant actuellement l\'examen',
+        'monitor.recentViolations': 'Violations Récentes',
+        'monitor.recentViolationsDesc': 'Derniers événements de sécurité détectés',
+        'monitor.studentAttempts': 'Tentatives des Étudiants',
+        'monitor.studentAttemptsDesc': 'Gérer toutes les tentatives d\'examen',
+        'monitor.noActive': 'Aucun étudiant ne passe l\'examen actuellement.',
+        'monitor.noViolations': 'Aucune violation enregistrée pour le moment.',
+        'monitor.noAttempts': 'Aucune tentative pour le moment.',
+        'monitor.lastActivity': 'Dernière activité',
+        'monitor.answered': 'répondu',
+        'monitor.ago': 'il y a',
+        'monitor.secShort': 's',
+        'monitor.minShort': 'm',
+        'monitor.hourShort': 'h',
+
+        // Monitor - Actions
+        'monitor.action.reset': 'Réinitialiser la tentative',
+        'monitor.action.resetDesc': 'L\'étudiant pourra repasser l\'examen.',
+        'monitor.action.delete': 'Supprimer la tentative',
+        'monitor.action.deleteDesc': 'Cela supprimera définitivement la progression de l\'étudiant.',
+        'monitor.action.clearViolations': 'Effacer les violations',
+        'monitor.action.clearViolationsDesc': 'Supprimer toutes les alertes de sécurité pour cet étudiant.',
+        'monitor.action.forceSubmit': 'Forcer la soumission',
+        'monitor.action.viewLog': 'Voir le journal',
+
+        // Violations - User Friendly Explanations
+        'violation.tab_switch': 'Changement d\'onglet',
+        'violation.tab_switch.desc': 'L\'étudiant est passé à un autre onglet du navigateur.',
+        'violation.window_blur': 'Fenêtre quittée',
+        'violation.window_blur.desc': 'L\'étudiant a cliqué en dehors de la fenêtre de l\'examen.',
+        'violation.fullscreen_exit': 'Plein écran quitté',
+        'violation.fullscreen_exit.desc': 'L\'étudiant a quitté le mode plein écran obligatoire.',
+        'violation.copy': 'Tentative de copie',
+        'violation.copy.desc': 'L\'étudiant a essayé de copier du texte de l\'examen.',
+        'violation.paste': 'Tentative de collage',
+        'violation.paste.desc': 'L\'étudiant a essayé de coller du texte dans une réponse.',
+        'violation.right_click': 'Tentative de clic droit',
+        'violation.right_click.desc': 'L\'étudiant a essayé d\'utiliser le menu contextuel.',
+        'violation.multiple_tabs': 'Plusieurs onglets ouverts',
+        'violation.multiple_tabs.desc': 'L\'étudiant a plus d\'un onglet ouvert pour cet examen.',
+        'violation.devtools': 'Outils de développement',
+        'violation.devtools.desc': 'L\'étudiant a tenté d\'ouvrir les outils de développement du navigateur.',
+        'violation.view_source': 'Voir le code source',
+        'violation.view_source.desc': 'L\'étudiant a tenté de voir le code source de la page.',
+        'violation.reload_delay': 'Retour différé après rechargement',
+        'violation.reload_delay.desc': 'L\'étudiant a mis trop de temps à revenir en plein écran après avoir rechargé la page.',
+        'violation.away_timeout': 'Absence trop longue',
+        'violation.away_timeout.desc': 'L\'étudiant s\'est absenté de l\'examen pendant plus de 15 secondes.',
     },
 } as const;
+
+type TranslationKey = keyof typeof translations.en;
 
 interface LanguageContextType {
     language: Language;
@@ -386,8 +661,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const t = useCallback(
-        (key: TranslationKey): string => {
-            return translations[language][key] || key;
+        (key: TranslationKey, params?: any[]): string => {
+            let translation = translations[language][key] || key;
+            if (params) {
+                params.forEach((param, index) => {
+                    translation = translation.replace(`{${index}}`, String(param));
+                });
+            }
+            return translation;
         },
         [language],
     );
@@ -452,8 +733,14 @@ export function useLanguageStandalone() {
     }, []);
 
     const t = useCallback(
-        (key: TranslationKey): string => {
-            return translations[language][key] || key;
+        (key: TranslationKey, params?: any[]): string => {
+            let translation = translations[language][key] || key;
+            if (params) {
+                params.forEach((param, index) => {
+                    translation = translation.replace(`{${index}}`, String(param));
+                });
+            }
+            return translation;
         },
         [language],
     );

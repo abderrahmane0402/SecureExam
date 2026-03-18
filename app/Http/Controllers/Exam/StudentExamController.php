@@ -54,6 +54,8 @@ class StudentExamController extends Controller
                         'status' => $latestAttempt->status,
                         'score' => $latestAttempt->score,
                         'percentage' => $latestAttempt->percentage,
+                        'violation_count' => $latestAttempt->violation_count,
+                        'auto_submitted' => $latestAttempt->auto_submitted,
                     ] : null,
                 ];
             });
@@ -76,7 +78,7 @@ class StudentExamController extends Controller
         $attempts = $exam->attempts()
             ->where('student_id', $user->id)
             ->orderByDesc('created_at')
-            ->get(['id', 'attempt_number', 'status', 'score', 'percentage', 'started_at', 'submitted_at']);
+            ->get(['id', 'attempt_number', 'status', 'score', 'percentage', 'started_at', 'submitted_at', 'violation_count', 'auto_submitted']);
 
         $completedAttempts = $attempts->whereIn('status', ['submitted', 'graded', 'auto_submitted'])->count();
 

@@ -175,6 +175,7 @@ class ExamController extends Controller
         // Get all attempts for management
         $allAttempts = $exam->attempts()
             ->with('student:id,name,email')
+            ->withCount('answers')
             ->orderByDesc('created_at')
             ->get();
 
@@ -235,6 +236,8 @@ class ExamController extends Controller
                 'violation_type' => $v->violation_type,
                 'details' => $v->details,
                 'occurred_at' => $v->occurred_at?->toISOString(),
+                'severity' => $v->severity,
+                'duration_seconds' => $v->duration_seconds,
                 'attempt' => [
                     'student' => [
                         'name' => $v->attempt?->student?->name,
@@ -242,6 +245,27 @@ class ExamController extends Controller
                 ],
             ]),
         ]);
+    }
+
+    /**
+     * Force submit a student's attempt.
+     */
+    public function forceSubmit(Exam $exam, ExamAttempt $attempt): RedirectResponse
+    {
+        Gate::authorize('update', $exam);
+
+        if ($attempt->exam_id !== $exam->id) {
+            abort(404);
+        }
+
+        if ($attempt->status === 'in_progress') {
+            $attempt->update([
+                'status' => 'submitted',
+                'completed_at' => now(),
+            ]);
+        }
+
+        return back()->with('success', 'Attempt force submitted successfully.');
     }
 
     /**

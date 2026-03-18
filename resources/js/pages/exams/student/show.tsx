@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import type { BreadcrumbItem, Exam, ExamAttempt } from '@/types';
+import { useLanguage } from '@/hooks/use-language';
 
 interface Props {
     exam: Exam & {
@@ -39,6 +40,7 @@ export default function StudentExamShow({
     can_take,
     remaining_attempts,
 }: Props) {
+    const { t } = useLanguage();
     const [acknowledged, setAcknowledged] = useState(false);
     const [starting, setStarting] = useState(false);
 
@@ -55,8 +57,8 @@ export default function StudentExamShow({
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'My Exams', href: '/student/exams' },
+        { title: t('common.dashboard'), href: '/dashboard' },
+        { title: t('student.exams.title'), href: '/student/exams' },
         { title: exam.title, href: `/student/exams/${exam.id}` },
     ];
 
@@ -74,32 +76,32 @@ export default function StudentExamShow({
                 {/* Exam Info */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Exam Information</CardTitle>
+                        <CardTitle>{t('student.exam.info')}</CardTitle>
                     </CardHeader>
                     <CardContent className="grid gap-4 sm:grid-cols-2">
                         <div className="flex items-center gap-3">
                             <ClockIcon className="size-5 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">Duration</p>
+                                <p className="font-medium">{t('exam.duration')}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {exam.duration_minutes} minutes
+                                    {exam.duration_minutes} {t('exam.minutes')}
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <FileTextIcon className="size-5 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">Questions</p>
+                                <p className="font-medium">{t('exam.questions')}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {exam.questions_count} questions (
-                                    {exam.total_points} points)
+                                    {exam.questions_count} {t('exam.questions')} (
+                                    {exam.total_points} {t('exam.points')})
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <CalendarIcon className="size-5 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">Available Until</p>
+                                <p className="font-medium">{t('exam.availableUntil')}</p>
                                 <p className="text-sm text-muted-foreground">
                                     {formatDate(exam.end_time)}
                                 </p>
@@ -108,10 +110,10 @@ export default function StudentExamShow({
                         <div className="flex items-center gap-3">
                             <PlayIcon className="size-5 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">Attempts</p>
+                                <p className="font-medium">{t('exam.attempts')}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {attemptsUsed} of {exam.allowed_attempts}{' '}
-                                    used
+                                    {attemptsUsed} {t('exam.of')} {exam.allowed_attempts}{' '}
+                                    {t('exam.used')}
                                 </p>
                             </div>
                         </div>
@@ -123,36 +125,29 @@ export default function StudentExamShow({
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-yellow-600">
                             <ShieldIcon className="size-5" />
-                            Important Rules
+                            {t('student.exam.rules')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                         <p className="flex items-start gap-2">
                             <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-yellow-500" />
-                            The exam will run in{' '}
-                            <strong>fullscreen mode</strong>. Exiting fullscreen
-                            will be logged as a violation.
+                            {t('student.exam.rule.fullscreen')}
                         </p>
                         <p className="flex items-start gap-2">
                             <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-yellow-500" />
-                            <strong>Tab switching</strong> and{' '}
-                            <strong>window focus loss</strong> will be detected
-                            and logged.
+                            {t('student.exam.rule.tabs')}
                         </p>
                         <p className="flex items-start gap-2">
                             <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-yellow-500" />
-                            <strong>Copy, paste, and right-click</strong> are
-                            disabled during the exam.
+                            {t('student.exam.rule.copyPaste')}
                         </p>
                         <p className="flex items-start gap-2">
                             <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-yellow-500" />
-                            Multiple violations may result in{' '}
-                            <strong>automatic submission</strong> of your exam.
+                            {t('student.exam.rule.autoSubmit')}
                         </p>
                         <p className="flex items-start gap-2">
                             <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-yellow-500" />
-                            Your answers are <strong>auto-saved</strong>, but
-                            make sure to submit before time runs out.
+                            {t('student.exam.rule.autoSave')}
                         </p>
                     </CardContent>
                 </Card>
@@ -161,7 +156,7 @@ export default function StudentExamShow({
                 {attempts.length > 0 && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Your Attempts</CardTitle>
+                            <CardTitle>{t('student.exam.attempts')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
@@ -172,39 +167,41 @@ export default function StudentExamShow({
                                     >
                                         <div>
                                             <p className="font-medium">
-                                                Attempt {attempt.attempt_number}
+                                                {t('student.exam.attemptNumber')} {attempt.attempt_number}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
                                                 {formatDate(attempt.started_at)}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            {attempt.violation_count > 0 && (
+                                            {attempt.violation_count !== undefined && attempt.violation_count > 0 && (
                                                 <Badge
                                                     variant="destructive"
                                                     className="text-xs"
                                                 >
                                                     {attempt.violation_count}{' '}
-                                                    violations
+                                                    {t('exam.violations')}
                                                 </Badge>
                                             )}
                                             <Badge
                                                 variant={
                                                     attempt.status === 'graded'
                                                         ? 'default'
-                                                        : attempt.status ===
-                                                            'in_progress'
-                                                          ? 'secondary'
-                                                          : 'outline'
+                                                        : attempt.status === 'auto_submitted'
+                                                          ? 'destructive'
+                                                          : attempt.status === 'in_progress'
+                                                            ? 'secondary'
+                                                            : 'outline'
                                                 }
                                             >
                                                 {attempt.status === 'graded' &&
                                                 attempt.score !== null
                                                     ? `${Number(attempt.score).toFixed(0)}%`
-                                                    : attempt.status.replace(
-                                                          '_',
-                                                          ' ',
-                                                      )}
+                                                    : attempt.status === 'auto_submitted'
+                                                      ? t('exam.status.autoSubmitted')
+                                                      : attempt.status === 'in_progress'
+                                                        ? t('exam.status.inProgress')
+                                                        : t('exam.status.submitted')}
                                             </Badge>
                                         </div>
                                     </div>
@@ -220,12 +217,12 @@ export default function StudentExamShow({
                         {inProgressAttempt ? (
                             <div className="space-y-4 text-center">
                                 <p className="text-muted-foreground">
-                                    You have an exam in progress.
+                                    {t('student.exam.inProgressDesc')}
                                 </p>
                                 <Button size="lg" asChild>
-                                    <a href={`/student/exams/${exam.id}/take`}>
+                                    <a href={`/exam/take/${inProgressAttempt.id}`}>
                                         <PlayIcon className="size-4" />
-                                        Continue Exam
+                                        {t('student.exams.continue')}
                                     </a>
                                 </Button>
                             </div>
@@ -243,9 +240,7 @@ export default function StudentExamShow({
                                         htmlFor="acknowledge"
                                         className="cursor-pointer text-sm"
                                     >
-                                        I understand the exam rules and that my
-                                        activity will be monitored. I am ready
-                                        to start the exam.
+                                        {t('student.exam.acknowledge')}
                                     </Label>
                                 </div>
                                 <Button
@@ -256,18 +251,17 @@ export default function StudentExamShow({
                                 >
                                     <PlayIcon className="size-4" />
                                     {starting
-                                        ? 'Starting...'
-                                        : `Start Exam (Attempt ${attemptsUsed + 1} of ${exam.allowed_attempts})`}
+                                        ? t('student.exam.starting')
+                                        : `${t('student.exams.start')} (${t('student.exam.attemptNumber')} ${attemptsUsed + 1} ${t('exam.of')} ${exam.allowed_attempts})`}
                                 </Button>
                             </div>
                         ) : (
                             <div className="text-center text-muted-foreground">
                                 {!isAvailable ? (
-                                    <p>This exam is not currently available.</p>
+                                    <p>{t('student.exam.notAvailable')}</p>
                                 ) : (
                                     <p>
-                                        You have used all your attempts for this
-                                        exam.
+                                        {t('student.exam.allAttemptsUsed')}
                                     </p>
                                 )}
                             </div>

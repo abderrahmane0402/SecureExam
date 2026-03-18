@@ -1,9 +1,8 @@
 {
     "agents": [
-        "copilot"
+        "gemini"
     ],
-    "guidelines": true,
-    "packages": [
-        "inertiajs/inertia-laravel"
-    ]
+    "herd_mcp": false,
+    "mcp": true,
+    "sail": false
 }

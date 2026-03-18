@@ -11,40 +11,23 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { BreadcrumbItem } from '@/types';
-
-interface ExamData {
-    id: number;
-    title: string;
-    description: string | null;
-    duration_minutes: number;
-    start_time: string;
-    end_time: string;
-    allowed_attempts: number;
-    questions_count: number;
-    instructor: { id: number; name: string } | null;
-    is_available: boolean;
-    completed_attempts: number;
-    can_take: boolean;
-    latest_attempt: {
-        id: number;
-        status: string;
-        score: number | null;
-        percentage: number | null;
-    } | null;
-}
+import type { ExamForStudent } from '@/types/exam';
+import { useLanguage } from '@/hooks/use-language';
 
 interface Props {
-    exams: ExamData[];
+    exams: ExamForStudent[];
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'My Exams', href: '/student/exams' },
-];
-
 export default function StudentExamsIndex({ exams = [] }: Props) {
+    const { t } = useLanguage();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: t('common.dashboard'), href: '/dashboard' },
+        { title: t('student.exams.title'), href: '/student/exams' },
+    ];
+
     const formatDate = (date: string) =>
-        new Date(date).toLocaleDateString('en-US', {
+        new Date(date).toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -54,14 +37,14 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
 
     const now = new Date();
 
-    const getExamStatus = (exam: ExamData) => {
+    const getExamStatus = (exam: ExamForStudent) => {
         const start = new Date(exam.start_time);
         const end = new Date(exam.end_time);
 
         if (now < start)
-            return { label: 'Upcoming', variant: 'secondary' as const };
-        if (now > end) return { label: 'Ended', variant: 'outline' as const };
-        return { label: 'Available', variant: 'default' as const };
+            return { label: t('exam.status.upcoming'), variant: 'secondary' as const };
+        if (now > end) return { label: t('exam.status.ended'), variant: 'outline' as const };
+        return { label: t('exam.status.available'), variant: 'default' as const };
     };
 
     // Split exams into available and completed
@@ -78,27 +61,24 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="My Exams" />
+            <Head title={t('student.exams.title')} />
             <div className="flex flex-col gap-6 p-6">
                 <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <h1 className="text-2xl font-bold">My Exams</h1>
+                    <h1 className="text-2xl font-bold">{t('student.exams.title')}</h1>
                     <p className="mt-1 opacity-90">
-                        View and take your assigned exams
+                        {t('student.exams.subtitle')}
                     </p>
                 </div>
 
                 {/* Available Exams */}
                 <section>
                     <h2 className="mb-4 text-lg font-semibold">
-                        Available Exams ({availableExams.length})
+                        {t('student.exams.available')} ({availableExams.length})
                     </h2>
                     {availableExams.length > 0 ? (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {availableExams.map((exam) => {
                                 const status = getExamStatus(exam);
-                                const attemptsLeft =
-                                    exam.allowed_attempts -
-                                    exam.completed_attempts;
                                 const isInProgress =
                                     exam.latest_attempt?.status ===
                                     'in_progress';
@@ -118,13 +98,13 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                     className="shrink-0"
                                                 >
                                                     {isInProgress
-                                                        ? 'In Progress'
+                                                        ? t('exam.status.inProgress')
                                                         : status.label}
                                                 </Badge>
                                             </div>
                                             <CardDescription className="line-clamp-2 h-10">
                                                 {exam.description ||
-                                                    'No description'}
+                                                    t('common.noResults')}
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent className="flex flex-1 flex-col">
@@ -136,7 +116,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                             {
                                                                 exam.duration_minutes
                                                             }{' '}
-                                                            min
+                                                            {t('exam.minutes')}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -145,14 +125,14 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                             {
                                                                 exam.questions_count
                                                             }{' '}
-                                                            questions
+                                                            {t('exam.questions')}
                                                         </span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                     <CalendarIcon className="size-4 shrink-0" />
                                                     <span className="truncate">
-                                                        Until{' '}
+                                                        {t('exam.availableUntil')}{' '}
                                                         {formatDate(
                                                             exam.end_time,
                                                         )}
@@ -162,7 +142,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
 
                                             <div className="mt-4 flex items-center justify-between border-t pt-4">
                                                 <span className="text-sm text-muted-foreground">
-                                                    Attempts:{' '}
+                                                    {t('exam.attempts')}:{' '}
                                                     <span className="font-medium text-foreground">
                                                         {
                                                             exam.completed_attempts
@@ -176,7 +156,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                             href={`/exam/take/${exam.latest_attempt?.id}`}
                                                         >
                                                             <PlayIcon className="size-4" />
-                                                            Continue
+                                                            {t('student.exams.continue')}
                                                         </Link>
                                                     </Button>
                                                 ) : exam.can_take ? (
@@ -185,7 +165,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                             href={`/student/exams/${exam.id}`}
                                                         >
                                                             <PlayIcon className="size-4" />
-                                                            Start
+                                                            {t('student.exams.start')}
                                                         </Link>
                                                     </Button>
                                                 ) : (
@@ -193,8 +173,8 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                         disabled
                                                         variant="outline"
                                                     >
-                                                        {attemptsLeft <= 0
-                                                            ? 'No attempts left'
+                                                        {exam.completed_attempts >= exam.allowed_attempts
+                                                            ? t('student.exams.noAttempts')
                                                             : status.label}
                                                     </Button>
                                                 )}
@@ -207,7 +187,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                     ) : (
                         <Card>
                             <CardContent className="py-8 text-center text-muted-foreground">
-                                No exams available at this time.
+                                {t('student.exams.noAvailable')}
                             </CardContent>
                         </Card>
                     )}
@@ -217,7 +197,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                 {completedExams.length > 0 && (
                     <section>
                         <h2 className="mb-4 text-lg font-semibold">
-                            Completed Exams ({completedExams.length})
+                            {t('student.exams.completed')} ({completedExams.length})
                         </h2>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {completedExams.map((exam) => {
@@ -235,17 +215,19 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                 </CardTitle>
                                                 <Badge
                                                     variant={
-                                                        attempt?.status ===
-                                                        'graded'
+                                                        attempt?.status === 'graded'
                                                             ? 'default'
-                                                            : 'secondary'
+                                                            : attempt?.status === 'auto_submitted'
+                                                              ? 'destructive'
+                                                              : 'secondary'
                                                     }
                                                     className="shrink-0"
                                                 >
-                                                    {attempt?.status ===
-                                                    'graded'
-                                                        ? 'Graded'
-                                                        : 'Submitted'}
+                                                    {attempt?.status === 'graded'
+                                                        ? t('exam.status.graded')
+                                                        : attempt?.status === 'auto_submitted'
+                                                          ? t('exam.status.autoSubmitted')
+                                                          : t('exam.status.submitted')}
                                                 </Badge>
                                             </div>
                                         </CardHeader>
@@ -268,7 +250,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                         </>
                                                     ) : (
                                                         <p className="text-sm text-muted-foreground">
-                                                            Awaiting grade
+                                                            {t('student.exams.awaitingGrade')}
                                                         </p>
                                                     )}
                                                 </div>
@@ -279,7 +261,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                     <Link
                                                         href={`/student/exams/${exam.id}/results`}
                                                     >
-                                                        View Results
+                                                        {t('student.exams.viewResults')}
                                                     </Link>
                                                 </Button>
                                             </div>
@@ -295,7 +277,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                     <Card>
                         <CardContent className="py-12 text-center">
                             <p className="text-muted-foreground">
-                                You don't have any assigned exams yet.
+                                {t('student.exams.none')}
                             </p>
                         </CardContent>
                     </Card>

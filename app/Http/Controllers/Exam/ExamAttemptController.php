@@ -130,6 +130,7 @@ class ExamAttemptController extends Controller
                 'id' => $attempt->id,
                 'started_at' => $attempt->started_at,
                 'remaining_time' => $attempt->remaining_time,
+                'violation_count' => $attempt->violation_count,
             ],
             'exam' => [
                 'id' => $exam->id,
@@ -190,19 +191,21 @@ class ExamAttemptController extends Controller
     /**
      * Auto-submit exam (called when time expires or violations exceed limit).
      */
-    public function autoSubmit(ExamAttempt $attempt): JsonResponse
+    public function autoSubmit(ExamAttempt $attempt): RedirectResponse|JsonResponse
     {
         if ($attempt->status !== ExamAttempt::STATUS_IN_PROGRESS) {
             return response()->json(['error' => 'Attempt already submitted'], 400);
         }
 
         if ($attempt->student_id !== auth()->id()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            abort(403);
         }
 
         $this->finalizeAttempt($attempt, true);
 
-        return response()->json(['success' => true]);
+        return redirect()
+            ->route('student.exams.show', $attempt->exam_id)
+            ->with('error', 'Exam auto-submitted (time expired or security violation).');
     }
 
     /**
@@ -210,6 +213,10 @@ class ExamAttemptController extends Controller
      */
     public function logViolation(LogViolationRequest $request, ExamAttempt $attempt): JsonResponse
     {
+        if ($attempt->status !== ExamAttempt::STATUS_IN_PROGRESS) {
+            return response()->json(['error' => 'Exam already submitted'], 400);
+        }
+
         $validated = $request->validated();
 
         // Determine severity based on duration if not provided
@@ -217,8 +224,9 @@ class ExamAttemptController extends Controller
         $duration = $validated['duration_seconds'] ?? null;
 
         // Auto-calculate severity from duration for focus-loss violations
-        if ($duration !== null && in_array($validated['violation_type'], ['tab_switch', 'window_blur', 'fullscreen_exit'])) {
-            if ($duration <= 3) {
+        // thresholds: <3s = low, 3-15s = medium, 15-60s = high, >60s = critical
+        if ($duration !== null && in_array($validated['violation_type'], ['tab_switch', 'window_blur', 'fullscreen_exit', 'reload_delay'])) {
+            if ($duration < 3) {
                 $severity = 'low';
             } elseif ($duration <= 15) {
                 $severity = 'medium';
@@ -229,8 +237,10 @@ class ExamAttemptController extends Controller
             }
         }
 
-        // For low severity (< 3 seconds), log silently but don't count as violation
-        $countAsViolation = $severity !== 'low';
+        // For low severity focus losses, log but don't increment violation count
+        // BUT for other types (copy/paste), always count
+        $isFocusLoss = in_array($validated['violation_type'], ['tab_switch', 'window_blur', 'fullscreen_exit', 'reload_delay']);
+        $countAsViolation = ! ($isFocusLoss && $severity === 'low');
 
         // Create violation log
         ViolationLog::query()->create([
@@ -244,12 +254,12 @@ class ExamAttemptController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Only increment violation count for non-low severity
+        // Only increment violation count if it counts
         if ($countAsViolation) {
             $attempt->increment('violation_count');
         }
 
-        // Check if violation threshold exceeded (configurable per exam, default 5)
+        // Check if violation threshold exceeded (default 5)
         $maxViolations = $attempt->exam->max_violations ?? 5;
         if ($attempt->violation_count >= $maxViolations) {
             $this->finalizeAttempt($attempt, true);
@@ -261,15 +271,11 @@ class ExamAttemptController extends Controller
             ]);
         }
 
-        // Critical violations (> 60 seconds away) might trigger additional action
-        $shouldWarn = $severity === 'critical' || $severity === 'high';
-
         return response()->json([
             'success' => true,
             'violation_count' => $attempt->violation_count,
             'severity' => $severity,
             'counted' => $countAsViolation,
-            'should_warn' => $shouldWarn,
         ]);
     }
 

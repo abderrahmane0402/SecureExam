@@ -91,6 +91,8 @@ export interface ExamForStudent {
         status: AttemptStatus;
         score: number | null;
         percentage: number | null;
+        violation_count: number;
+        auto_submitted: boolean;
     } | null;
 }
 
@@ -179,6 +181,7 @@ export interface ExamTakingData {
         id: number;
         started_at: string;
         remaining_time: number;
+        violation_count: number;
     };
     exam: {
         id: number;

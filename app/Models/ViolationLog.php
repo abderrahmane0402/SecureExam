@@ -29,6 +29,8 @@ class ViolationLog extends Model
 
     public const TYPE_VIEW_SOURCE = 'view_source';
 
+    public const TYPE_RELOAD_DELAY = 'reload_delay';
+
     public const TYPES = [
         self::TYPE_TAB_SWITCH,
         self::TYPE_WINDOW_BLUR,
@@ -39,6 +41,7 @@ class ViolationLog extends Model
         self::TYPE_MULTIPLE_TABS,
         self::TYPE_DEVTOOLS,
         self::TYPE_VIEW_SOURCE,
+        self::TYPE_RELOAD_DELAY,
     ];
 
     public const SEVERITY_LOW = 'low';

@@ -1,15 +1,14 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-// STRICT thresholds (in seconds) - NO tolerance for cheating
+// STRICT thresholds (in seconds) - matched with backend
 const THRESHOLDS = {
-    WARNING: 2, // ≤2 seconds: warning + violation
-    MEDIUM: 5, // 3-5 seconds: medium severity
-    HIGH: 15, // 6-15 seconds: high severity
-    CRITICAL: 15, // >15 seconds: critical
+    LOW: 3, // <3 seconds: low severity (no count)
+    MEDIUM: 15, // 3-15 seconds: medium severity
+    HIGH: 60, // 15-60 seconds: high severity
+    CRITICAL: 60, // >60 seconds: critical
 };
 
-// Auto-submit if cumulative away time exceeds this (seconds) - HIDDEN FROM STUDENTS
+// Auto-submit if cumulative away time exceeds this (seconds)
 const MAX_CUMULATIVE_AWAY_TIME = 15;
 
 type Severity = 'low' | 'medium' | 'high' | 'critical';
@@ -18,6 +17,7 @@ interface UseExamSecurityOptions {
     attemptId: number;
     examId: number;
     maxViolations: number;
+    initialViolationCount?: number;
     onViolation?: (type: string, count: number, severity: Severity) => void;
     onAutoSubmit?: () => void;
     onLockChange?: (locked: boolean, reason: string) => void;
@@ -44,6 +44,7 @@ export function useExamSecurity({
     attemptId,
     examId,
     maxViolations = 5,
+    initialViolationCount = 0,
     onViolation,
     onAutoSubmit,
     onLockChange,
@@ -56,8 +57,9 @@ export function useExamSecurity({
         number | null
     >(null);
     const [warningMessage, setWarningMessage] = useState<string | null>(null);
+    const [reloadCountdown, setReloadCountdown] = useState<number | null>(null);
 
-    const violationCountRef = useRef(0);
+    const violationCountRef = useRef(initialViolationCount);
     const isSubmittingRef = useRef(false);
     const sessionTokenRef = useRef<string | null>(initialSessionToken || null);
     const hasEnteredFullscreenRef = useRef(false);
@@ -67,6 +69,8 @@ export function useExamSecurity({
     const cumulativeAwayTimeRef = useRef(0); // Track total time away
     const focusLossCountRef = useRef(0); // Track number of focus losses
     const kickTimerRef = useRef<NodeJS.Timeout | null>(null); // Timer for auto-kick while away
+    const reloadTimerRef = useRef<NodeJS.Timeout | null>(null); // Timer for reload tiered penalty
+    const reloadViolationLoggedRef = useRef(false);
 
     // Store callbacks in refs to avoid effect re-runs
     const onViolationRef = useRef(onViolation);
@@ -82,21 +86,14 @@ export function useExamSecurity({
 
     const getSeverityFromDuration = useCallback(
         (durationSeconds: number): Severity => {
-            // STRICT: Even short absences count, severity increases with duration
-            // Also factor in how many times they've left
-            const timesLeft = focusLossCountRef.current;
-
-            // Progressive penalty: after 2 focus losses, bump up severity
-            const severityBoost = timesLeft >= 3 ? 1 : 0;
-
-            if (durationSeconds <= THRESHOLDS.WARNING) {
-                return severityBoost > 0 ? 'medium' : 'low';
+            if (durationSeconds < THRESHOLDS.LOW) {
+                return 'low';
             }
             if (durationSeconds <= THRESHOLDS.MEDIUM) {
-                return severityBoost > 0 ? 'high' : 'medium';
+                return 'medium';
             }
             if (durationSeconds <= THRESHOLDS.HIGH) {
-                return severityBoost > 0 ? 'critical' : 'high';
+                return 'high';
             }
             return 'critical';
         },
@@ -113,6 +110,14 @@ export function useExamSecurity({
         setIsLocked(false);
         setLockReason('');
         onLockChangeRef.current?.(false, '');
+
+        // Clear reload penalty if it was running
+        if (reloadTimerRef.current) {
+            clearInterval(reloadTimerRef.current);
+            reloadTimerRef.current = null;
+        }
+        setReloadCountdown(null);
+        reloadViolationLoggedRef.current = false;
     }, []);
 
     const logViolation = useCallback(
@@ -129,13 +134,14 @@ export function useExamSecurity({
                     ? getSeverityFromDuration(durationSeconds)
                     : 'medium';
 
-            // Focus-related violations ALWAYS count (no free passes for Alt+Tab)
+            // Focus-related violations ONLY count if severity is not low
             const isFocusViolation = [
                 'tab_switch',
                 'window_blur',
                 'fullscreen_exit',
+                'reload_delay',
             ].includes(type);
-            const shouldCount = isFocusViolation || severity !== 'low';
+            const shouldCount = ! (isFocusViolation && severity === 'low');
 
             // Debounce: don't log same violation type within 2 seconds (reduced from 3)
             const now = Date.now();
@@ -173,10 +179,7 @@ export function useExamSecurity({
                         headers: {
                             'Content-Type': 'application/json',
                             Accept: 'application/json',
-                            'X-CSRF-TOKEN':
-                                document.querySelector<HTMLMetaElement>(
-                                    'meta[name="csrf-token"]',
-                                )?.content || '',
+                            'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
                             'X-Requested-With': 'XMLHttpRequest',
                         },
                         body: JSON.stringify(payload),
@@ -215,6 +218,45 @@ export function useExamSecurity({
         },
         [attemptId, examId, enabled, maxViolations, getSeverityFromDuration],
     );
+
+    const startReloadSecuritySequence = useCallback(() => {
+        if (reloadTimerRef.current) return;
+
+        // 0s: Immediately lock
+        lockExam('Exam resumed: Please return to fullscreen to continue.');
+
+        // 1s: Stabilized buffer - start countdown
+        setTimeout(() => {
+            if (document.fullscreenElement || isSubmittingRef.current) return;
+
+            setReloadCountdown(10);
+
+            reloadTimerRef.current = setInterval(() => {
+                setReloadCountdown((prev) => {
+                    if (prev === null || prev <= 0) {
+                        if (reloadTimerRef.current) clearInterval(reloadTimerRef.current);
+                        
+                        // 10s: The Kick
+                        if (!isSubmittingRef.current) {
+                            isSubmittingRef.current = true;
+                            onAutoSubmitRef.current?.();
+                        }
+                        return 0;
+                    }
+
+                    const next = prev - 1;
+
+                    // 5s: The Warning / Violation log
+                    if (next === 5 && !reloadViolationLoggedRef.current) {
+                        reloadViolationLoggedRef.current = true;
+                        logViolation('reload_delay', 'User took more than 5 seconds to return to fullscreen after reload.');
+                    }
+
+                    return next;
+                });
+            }, 1000);
+        }, 1000);
+    }, [lockExam, logViolation]);
 
     const handleFocusLoss = useCallback(
         (type: string, details: string) => {
@@ -256,14 +298,11 @@ export function useExamSecurity({
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN':
-                                document.querySelector<HTMLMetaElement>(
-                                    'meta[name="csrf-token"]',
-                                )?.content || '',
+                            'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
                         },
                         body: JSON.stringify({
                             violation_type: focusLossEventRef.current.type,
-                            details: `AUTO-KICKED: Exceeded cumulative away time (${totalWouldBe}s)`,
+                            details: `AUTO-KICKED: Exceeded cumulative away time (${MAX_CUMULATIVE_AWAY_TIME}s)`,
                             occurred_at: new Date(
                                 focusLossEventRef.current.lostAt,
                             ).toISOString(),
@@ -277,10 +316,7 @@ export function useExamSecurity({
                                 {
                                     method: 'POST',
                                     headers: {
-                                        'X-CSRF-TOKEN':
-                                            document.querySelector<HTMLMetaElement>(
-                                                'meta[name="csrf-token"]',
-                                            )?.content || '',
+                                        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
                                     },
                                 },
                             );
@@ -301,6 +337,13 @@ export function useExamSecurity({
             clearInterval(kickTimerRef.current);
             kickTimerRef.current = null;
         }
+
+        // Clear reload timer if active
+        if (reloadTimerRef.current) {
+            clearInterval(reloadTimerRef.current);
+            reloadTimerRef.current = null;
+        }
+        setReloadCountdown(null);
 
         if (!focusLossEventRef.current) return;
 
@@ -344,10 +387,7 @@ export function useExamSecurity({
                 await fetch(`/exam/attempt/${attemptId}/auto-submit`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN':
-                            document.querySelector<HTMLMetaElement>(
-                                'meta[name="csrf-token"]',
-                            )?.content || '',
+                        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
                     },
                 });
             } catch (e) {
@@ -431,7 +471,13 @@ export function useExamSecurity({
     useEffect(() => {
         if (!enabled) return;
 
-        // Grace period before monitoring starts (avoid false positives on load)
+        // If we're enabled on mount and NOT in fullscreen, this is likely a reload/resume
+        // Start the security sequence immediately (0s lock)
+        if (!document.fullscreenElement && !isInitializedRef.current && !isSubmittingRef.current) {
+            startReloadSecuritySequence();
+        }
+
+        // Grace period before monitoring other events starts (avoid false positives on load)
         const initTimer = setTimeout(() => {
             isInitializedRef.current = true;
         }, 2000);
@@ -559,10 +605,7 @@ export function useExamSecurity({
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN':
-                                document.querySelector<HTMLMetaElement>(
-                                    'meta[name="csrf-token"]',
-                                )?.content || '',
+                            'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
                         },
                         body: JSON.stringify({
                             session_token: sessionTokenRef.current,
@@ -589,10 +632,7 @@ export function useExamSecurity({
                 await fetch(`/exam/attempt/${attemptId}/heartbeat`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN':
-                            document.querySelector<HTMLMetaElement>(
-                                'meta[name="csrf-token"]',
-                            )?.content || '',
+                        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
                     },
                 });
             } catch (e) {
@@ -630,7 +670,7 @@ export function useExamSecurity({
             clearInterval(sessionInterval);
             clearTimeout(initTimer);
         };
-    }, [attemptId, enabled, logViolation, handleFocusLoss]);
+    }, [attemptId, enabled, logViolation, handleFocusLoss, startReloadSecuritySequence]);
 
     const setSubmitting = useCallback((value: boolean) => {
         isSubmittingRef.current = value;
@@ -646,9 +686,9 @@ export function useExamSecurity({
         // State
         isLocked,
         lockReason,
+        reloadCountdown,
         lastAbsenceDuration,
         warningMessage,
-        violationCount: violationCountRef.current,
         // For direct use
         logViolation,
     };

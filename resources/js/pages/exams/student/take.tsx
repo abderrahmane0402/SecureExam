@@ -1,20 +1,20 @@
 import { Head, router } from '@inertiajs/react';
-import { useState, useEffect, useCallback, useRef } from 'react';
 import {
+    AlertTriangleIcon,
+    ArrowLeftIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
     ClockIcon,
-    AlertTriangleIcon,
     FlagIcon,
-    SendIcon,
     SaveIcon,
+    SendIcon,
     MaximizeIcon,
     ShieldAlertIcon,
-    ArrowLeftIcon,
 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -25,12 +25,12 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { useExamSecurity } from '@/hooks/use-exam-security';
+import { useLanguage } from '@/hooks/use-language';
 import type {
     Exam,
     ExamAttempt,
     Question,
     QuestionOption,
-    ExamAnswer,
 } from '@/types';
 
 interface QuestionWithAnswer extends Question {
@@ -55,6 +55,7 @@ export default function TakeExam({
     answers: initialAnswers,
     session_token,
 }: Props) {
+    const { t } = useLanguage();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<
         Record<number, { selected_options?: number[]; text_answer?: string }>
@@ -83,7 +84,12 @@ export default function TakeExam({
     const [showViolationWarning, setShowViolationWarning] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [examStarted, setExamStarted] = useState(false);
+    const [saveError, setSaveError] = useState(false);
+    const [examStarted, setExamStarted] = useState(() => {
+        // Auto-start if attempt is already in progress (remaining time < duration)
+        const isAlreadyStarted = attempt.remaining_time < exam.duration_minutes * 60;
+        return isAlreadyStarted;
+    });
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
     const [lastViolationSeverity, setLastViolationSeverity] = useState<
         string | null
@@ -98,13 +104,12 @@ export default function TakeExam({
             `/exam/attempt/${attempt.id}/auto-submit`,
             {},
             {
-                onSuccess: () => {
-                    // Redirect to student exams page after auto-submit
-                    window.location.href = `/student/exams/${exam.id}`;
+                onFinish: () => {
+                    // router.post follows redirect automatically
                 },
             },
         );
-    }, [attempt.id, exam.id]);
+    }, [attempt.id]);
 
     // Security hook - only enabled after exam starts
     const {
@@ -114,12 +119,14 @@ export default function TakeExam({
         setSubmitting,
         isLocked,
         lockReason,
+        reloadCountdown,
         warningMessage,
         clearWarning,
     } = useExamSecurity({
         attemptId: attempt.id,
         examId: exam.id,
         maxViolations: 5,
+        initialViolationCount: attempt.violation_count || 0,
         onViolation: (type, count, severity) => {
             setViolationCount(count);
             setLastViolationSeverity(severity);
@@ -191,23 +198,28 @@ export default function TakeExam({
             data: { selected_options?: number[]; text_answer?: string },
         ) => {
             setSaving(true);
+            setSaveError(false);
             try {
-                await fetch(`/exam/attempt/${attempt.id}/answer`, {
+                const response = await fetch(`/exam/attempt/${attempt.id}/answer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN':
-                            document.querySelector<HTMLMetaElement>(
-                                'meta[name="csrf-token"]',
-                            )?.content || '',
+                        Accept: 'application/json',
+                        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
+                        'X-Requested-With': 'XMLHttpRequest',
                     },
                     body: JSON.stringify({
                         question_id: questionId,
                         ...data,
                     }),
                 });
+
+                if (!response.ok) {
+                    throw new Error('Save failed');
+                }
             } catch (e) {
                 console.error('Failed to save answer:', e);
+                setSaveError(true);
             } finally {
                 setSaving(false);
             }
@@ -302,7 +314,7 @@ export default function TakeExam({
     if (!examStarted) {
         return (
             <>
-                <Head title={`Start: ${exam.title}`} />
+                <Head title={`${t('exam.take.start')}: ${exam.title}`} />
                 <div className="flex min-h-screen items-center justify-center bg-background p-4">
                     <Card className="w-full max-w-lg">
                         <CardHeader className="text-center">
@@ -313,32 +325,21 @@ export default function TakeExam({
                         <CardContent className="space-y-6">
                             <div className="space-y-4">
                                 <h3 className="font-semibold">
-                                    Before you begin:
+                                    {t('exam.take.beforeYouBegin')}
                                 </h3>
                                 <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                                    <li>{t('exam.take.rule1')}</li>
+                                    <li>{t('exam.take.rule2')}</li>
+                                    <li>{t('exam.take.rule3')}</li>
+                                    <li>{t('exam.take.rule4')}</li>
                                     <li>
-                                        This exam will open in fullscreen mode
-                                    </li>
-                                    <li>
-                                        Do not switch tabs, windows, or exit
-                                        fullscreen
-                                    </li>
-                                    <li>
-                                        Copy, paste, and right-click are
-                                        disabled
-                                    </li>
-                                    <li>
-                                        Violations will be recorded and may
-                                        result in automatic submission
-                                    </li>
-                                    <li>
-                                        Time limit:{' '}
+                                        {t('exam.take.rule5')}{' '}
                                         {Math.floor(
                                             attempt.remaining_time / 60,
                                         )}{' '}
-                                        minutes
+                                        {t('exam.minutes')}
                                     </li>
-                                    <li>Questions: {questions.length}</li>
+                                    <li>{t('exam.questions')}: {questions.length}</li>
                                 </ul>
                             </div>
                             <Button
@@ -347,7 +348,7 @@ export default function TakeExam({
                                 size="lg"
                             >
                                 <MaximizeIcon className="mr-2 size-5" />
-                                Start Exam
+                                {t('exam.take.start')}
                             </Button>
                         </CardContent>
                     </Card>
@@ -358,7 +359,7 @@ export default function TakeExam({
 
     return (
         <>
-            <Head title={`Taking: ${exam.title}`} />
+            <Head title={`${exam.title}`} />
             <div className="flex min-h-screen flex-col bg-background select-none">
                 {/* Blocking Overlay - shown when exam is locked */}
                 {isLocked && (
@@ -369,7 +370,7 @@ export default function TakeExam({
                                     <ShieldAlertIcon className="size-8 text-red-600" />
                                 </div>
                                 <CardTitle className="text-xl text-red-600">
-                                    Exam Locked
+                                    {t('exam.take.locked')}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4 text-center">
@@ -377,10 +378,15 @@ export default function TakeExam({
                                     {lockReason}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                    Your exam timer is still running. Click
-                                    below to return to fullscreen and continue
-                                    your exam.
+                                    {t('exam.take.lockedReason')}
                                 </p>
+                                {reloadCountdown !== null && (
+                                    <div className="rounded-md bg-red-50 p-3 text-red-700">
+                                        <p className="font-medium animate-pulse">
+                                            {t('exam.take.returnWithin', [reloadCountdown])}
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="pt-2">
                                     <Button
                                         onClick={returnToExam}
@@ -388,7 +394,7 @@ export default function TakeExam({
                                         size="lg"
                                     >
                                         <ArrowLeftIcon className="mr-2 size-5" />
-                                        Return to Exam
+                                        {t('exam.take.return')}
                                     </Button>
                                 </div>
                             </CardContent>
@@ -433,7 +439,7 @@ export default function TakeExam({
                         >
                             <AlertTriangleIcon className="size-5" />
                             <span>
-                                Security violation detected! ({violationCount}
+                                {t('exam.securityViolation')} ({violationCount}
                                 /5)
                             </span>
                         </div>
@@ -451,7 +457,15 @@ export default function TakeExam({
                                     className="animate-pulse"
                                 >
                                     <SaveIcon className="mr-1 size-3" />
-                                    Saving...
+                                    {t('exam.take.saving')}
+                                </Badge>
+                            )}
+                            {saveError && (
+                                <Badge
+                                    variant="destructive"
+                                >
+                                    <AlertTriangleIcon className="mr-1 size-3" />
+                                    Error saving
                                 </Badge>
                             )}
                         </div>
@@ -460,7 +474,7 @@ export default function TakeExam({
                             {violationCount > 0 && (
                                 <Badge variant="destructive">
                                     <AlertTriangleIcon className="mr-1 size-3" />
-                                    {violationCount} violations
+                                    {violationCount} {t('exam.violations')}
                                 </Badge>
                             )}
 
@@ -471,7 +485,7 @@ export default function TakeExam({
                                     onClick={() => enterFullscreen()}
                                 >
                                     <MaximizeIcon className="size-4" />
-                                    Fullscreen
+                                    {t('exam.take.fullscreen')}
                                 </Button>
                             )}
 
@@ -488,22 +502,22 @@ export default function TakeExam({
 
                             <Button onClick={handleSubmit}>
                                 <SendIcon className="size-4" />
-                                Submit Exam
+                                {t('exam.take.submit')}
                             </Button>
                         </div>
                     </div>
                 </header>
 
-                <div className="mx-auto flex w-full max-w-7xl flex-1">
+                <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:flex-row">
                     {/* Question Navigation Sidebar */}
-                    <aside className="w-64 border-r bg-muted/30 p-4">
+                    <aside className="w-full border-b bg-muted/30 p-4 md:w-64 md:border-r md:border-b-0">
                         <div className="sticky top-20">
                             <div className="mb-4">
                                 <p className="text-sm text-muted-foreground">
-                                    Answered: {answeredCount}/{questions.length}
+                                    {t('exam.take.answered')}: {answeredCount}/{questions.length}
                                 </p>
                             </div>
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid grid-cols-5 gap-2 md:grid-cols-4">
                                 {questions.map((q, index) => {
                                     const ans = answers[q.id];
                                     const isAnswered =
@@ -537,39 +551,36 @@ export default function TakeExam({
                                 })}
                             </div>
 
-                            <div className="mt-4 space-y-2 border-t pt-4 text-xs text-muted-foreground">
+                            <div className="mt-4 hidden space-y-2 border-t pt-4 text-xs text-muted-foreground md:block">
                                 <div className="flex items-center gap-2">
                                     <span className="h-4 w-4 rounded bg-green-100" />
-                                    <span>Answered</span>
+                                    <span>{t('exam.take.answered')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="h-4 w-4 rounded bg-muted" />
-                                    <span>Not answered</span>
+                                    <span>{t('exam.take.notAnswered')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <FlagIcon className="size-4 fill-yellow-500 text-yellow-500" />
-                                    <span>Flagged for review</span>
+                                    <span>{t('exam.take.flaggedDesc')}</span>
                                 </div>
                             </div>
                         </div>
                     </aside>
 
                     {/* Main Question Area */}
-                    <main className="flex-1 p-6">
+                    <main className="flex-1 p-4 md:p-6">
                         {currentQuestion && (
                             <Card className="mx-auto max-w-3xl">
                                 <CardHeader>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <Badge variant="outline">
-                                                Question {currentIndex + 1} of{' '}
+                                                {t('exam.take.question')} {currentIndex + 1} {t('exam.of')}{' '}
                                                 {questions.length}
                                             </Badge>
                                             <Badge variant="secondary">
-                                                {currentQuestion.points} point
-                                                {currentQuestion.points !== 1
-                                                    ? 's'
-                                                    : ''}
+                                                {currentQuestion.points} {t('exam.points')}
                                             </Badge>
                                         </div>
                                         <Button
@@ -588,8 +599,8 @@ export default function TakeExam({
                                                 className={`size-4 ${flagged.has(currentQuestion.id) ? 'fill-yellow-500' : ''}`}
                                             />
                                             {flagged.has(currentQuestion.id)
-                                                ? 'Flagged'
-                                                : 'Flag'}
+                                                ? t('exam.take.unflag')
+                                                : t('exam.take.flag')}
                                         </Button>
                                     </div>
                                     <CardTitle className="text-lg">
@@ -642,7 +653,7 @@ export default function TakeExam({
                                         'multiple_choice_multiple' && (
                                         <div className="space-y-2">
                                             <p className="text-sm text-muted-foreground">
-                                                Select all that apply
+                                                {t('exam.take.selectMultiple')}
                                             </p>
                                             {currentQuestion.options.map(
                                                 (option) => (
@@ -682,7 +693,7 @@ export default function TakeExam({
 
                                     {/* True/False */}
                                     {currentQuestion.type === 'true_false' && (
-                                        <div className="flex gap-4">
+                                        <div className="flex flex-col gap-4 sm:flex-row">
                                             {['true', 'false'].map((value) => (
                                                 <label
                                                     key={value}
@@ -725,7 +736,7 @@ export default function TakeExam({
                                             onChange={(e) =>
                                                 handleTextAnswer(e.target.value)
                                             }
-                                            placeholder="Type your answer here..."
+                                            placeholder={t('exam.take.shortTextPlaceholder')}
                                             className="w-full rounded-lg border p-4 text-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary"
                                         />
                                     )}
@@ -739,7 +750,7 @@ export default function TakeExam({
                                             onChange={(e) =>
                                                 handleTextAnswer(e.target.value)
                                             }
-                                            placeholder="Write your answer here..."
+                                            placeholder={t('exam.take.essayPlaceholder')}
                                             rows={10}
                                             className="w-full resize-y rounded-lg border p-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary"
                                         />
@@ -760,7 +771,7 @@ export default function TakeExam({
                                 disabled={currentIndex === 0}
                             >
                                 <ChevronLeftIcon className="size-4" />
-                                Previous
+                                {t('exam.take.previous')}
                             </Button>
 
                             {currentIndex < questions.length - 1 ? (
@@ -769,13 +780,13 @@ export default function TakeExam({
                                         setCurrentIndex(currentIndex + 1)
                                     }
                                 >
-                                    Next
+                                    {t('exam.take.next')}
                                     <ChevronRightIcon className="size-4" />
                                 </Button>
                             ) : (
                                 <Button onClick={handleSubmit}>
                                     <SendIcon className="size-4" />
-                                    Submit Exam
+                                    {t('exam.take.submit')}
                                 </Button>
                             )}
                         </div>
@@ -792,24 +803,22 @@ export default function TakeExam({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Submit Exam?</DialogTitle>
+                        <DialogTitle>{t('exam.take.confirmTitle')}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to submit your exam? You
-                            cannot change your answers after submission.
+                            {t('exam.take.confirmDesc')}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <p className="text-sm text-muted-foreground">
-                            You have answered {answeredCount} of{' '}
-                            {questions.length} questions.
+                            {t('exam.take.confirmStats', [answeredCount, questions.length])}
                         </p>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={handleCancelSubmit}>
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                         <Button onClick={handleConfirmSubmit}>
-                            Submit Exam
+                            {t('exam.take.submit')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

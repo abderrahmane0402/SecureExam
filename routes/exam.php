@@ -43,6 +43,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('exams.attempts.reset');
         Route::post('exams/{exam}/attempts/{attempt}/reset-violations', [ExamController::class, 'resetViolations'])
             ->name('exams.attempts.reset-violations');
+        Route::post('exams/{exam}/attempts/{attempt}/force-submit', [ExamController::class, 'forceSubmit'])
+            ->name('exams.attempts.force-submit');
 
         // Questions
         Route::post('exams/{exam}/questions', [QuestionController::class, 'store'])
