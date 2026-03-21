@@ -58,11 +58,11 @@ export function useExamSecurity({
     >(null);
     const [warningMessage, setWarningMessage] = useState<string | null>(null);
     const [reloadCountdown, setReloadCountdown] = useState<number | null>(null);
+    const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false);
 
     const violationCountRef = useRef(initialViolationCount);
     const isSubmittingRef = useRef(false);
     const sessionTokenRef = useRef<string | null>(initialSessionToken || null);
-    const hasEnteredFullscreenRef = useRef(false);
     const isInitializedRef = useRef(false);
     const lastViolationTimeRef = useRef<Record<string, number>>({});
     const focusLossEventRef = useRef<FocusLossEvent | null>(null);
@@ -71,6 +71,19 @@ export function useExamSecurity({
     const kickTimerRef = useRef<NodeJS.Timeout | null>(null); // Timer for auto-kick while away
     const reloadTimerRef = useRef<NodeJS.Timeout | null>(null); // Timer for reload tiered penalty
     const reloadViolationLoggedRef = useRef(false);
+    const isResumingRef = useRef(false);
+
+    // Initial check for resume state
+    // We only want to run this once to figure out the starting state
+    useEffect(() => {
+        // Since we don't have access to remaining time exactly here,
+        // we check if the exam is enabled AND we are not in fullscreen.
+        // If they click 'Commencer', they enter fullscreen BEFORE this hook mounts
+        if (enabled && !document.fullscreenElement) {
+            isResumingRef.current = true;
+            setHasEnteredFullscreen(true);
+        }
+    }, [enabled, examId]);
 
     // Store callbacks in refs to avoid effect re-runs
     const onViolationRef = useRef(onViolation);
@@ -120,6 +133,11 @@ export function useExamSecurity({
         reloadViolationLoggedRef.current = false;
     }, []);
 
+    const showWarning = useCallback((message: string) => {
+        setWarningMessage(message);
+        setTimeout(() => setWarningMessage(null), 6000);
+    }, []);
+
     const logViolation = useCallback(
         async (
             type: string,
@@ -143,10 +161,10 @@ export function useExamSecurity({
             ].includes(type);
             const shouldCount = ! (isFocusViolation && severity === 'low');
 
-            // Debounce: don't log same violation type within 2 seconds (reduced from 3)
+            // Debounce: don't log same violation type within 2 seconds
             const now = Date.now();
             const lastTime = lastViolationTimeRef.current[type] || 0;
-            if (now - lastTime < 3000 && durationSeconds === undefined) {
+            if (now - lastTime < 2000 && durationSeconds === undefined) {
                 return;
             }
             lastViolationTimeRef.current[type] = now;
@@ -155,6 +173,11 @@ export function useExamSecurity({
                 violationCountRef.current += 1;
             }
             const count = violationCountRef.current;
+
+            // Show immediate warning to user for any violation (except the ones handled by returnToExam)
+            if (!isFocusViolation) {
+                showWarning(`⚠️ Security Violation: ${details}`);
+            }
 
             // Log to server
             try {
@@ -187,18 +210,12 @@ export function useExamSecurity({
                 );
 
                 if (!response.ok) {
-                    const errorData = await response.text();
-                    console.error(
-                        'Violation log failed:',
-                        response.status,
-                        errorData,
-                    );
+                    console.error('Violation log failed:', response.status);
                 } else {
                     const data = await response.json();
                     if (data.auto_submitted) {
                         isSubmittingRef.current = true;
-                        // Redirect directly - exam already submitted by backend
-                        window.location.href = `/student/exams/${examId}`;
+                        onAutoSubmitRef.current?.();
                         return;
                     }
                 }
@@ -216,7 +233,7 @@ export function useExamSecurity({
                 onAutoSubmitRef.current?.();
             }
         },
-        [attemptId, examId, enabled, maxViolations, getSeverityFromDuration],
+        [attemptId, enabled, maxViolations, getSeverityFromDuration, showWarning],
     );
 
     const startReloadSecuritySequence = useCallback(() => {
@@ -262,6 +279,18 @@ export function useExamSecurity({
         (type: string, details: string) => {
             if (!isInitializedRef.current || isSubmittingRef.current) return;
 
+            // ATOMIC TIMESTAMP: Only set the lostAt time if it's the FIRST event in this sequence.
+            // This prevents a 'blur' event from being overwritten by a subsequent 'tab_switch' event,
+            // which was causing the duration to be miscalculated.
+            if (focusLossEventRef.current) {
+                // We are already tracking a focus loss. Just update the type if it's "worse"
+                if (type === 'tab_switch' && focusLossEventRef.current.type === 'window_blur') {
+                    focusLossEventRef.current.type = type;
+                    focusLossEventRef.current.details = details;
+                }
+                return;
+            }
+
             // Record when focus was lost
             focusLossEventRef.current = {
                 lostAt: Date.now(),
@@ -282,7 +311,7 @@ export function useExamSecurity({
                     return;
                 }
 
-                const nowAway = Math.round(
+                const nowAway = Math.floor(
                     (Date.now() - focusLossEventRef.current.lostAt) / 1000,
                 );
                 const totalWouldBe = cumulativeAwayTimeRef.current + nowAway;
@@ -322,13 +351,12 @@ export function useExamSecurity({
                             );
                         })
                         .finally(() => {
-                            // Redirect immediately - no mercy
-                            window.location.href = `/student/exams/${examId}`;
+                            onAutoSubmitRef.current?.();
                         });
                 }
             }, checkInterval);
         },
-        [attemptId, examId, lockExam],
+        [attemptId, lockExam],
     );
 
     const handleFocusReturn = useCallback(async () => {
@@ -349,8 +377,8 @@ export function useExamSecurity({
 
         const event = focusLossEventRef.current;
         const returnedAt = Date.now();
-        const durationMs = returnedAt - event.lostAt;
-        const durationSeconds = Math.round(durationMs / 1000);
+        // Use floor to prevent premature kicks
+        const durationSeconds = Math.floor((returnedAt - event.lostAt) / 1000);
 
         // Clear the event
         focusLossEventRef.current = null;
@@ -394,7 +422,7 @@ export function useExamSecurity({
                 console.error('Auto-submit failed:', e);
             }
 
-            window.location.href = `/student/exams/${examId}`;
+            onAutoSubmitRef.current?.();
             return;
         }
 
@@ -412,10 +440,7 @@ export function useExamSecurity({
             message += 'Warning recorded.';
         }
 
-        setWarningMessage(message);
-
-        // Clear warning after 6 seconds
-        setTimeout(() => setWarningMessage(null), 6000);
+        showWarning(message);
 
         // Log the violation with duration info
         await logViolation(
@@ -424,7 +449,7 @@ export function useExamSecurity({
             durationSeconds,
             new Date(returnedAt).toISOString(),
         );
-    }, [attemptId, examId, logViolation, getSeverityFromDuration]);
+    }, [attemptId, logViolation, getSeverityFromDuration, showWarning]);
 
     // Request fullscreen - always allowed (doesn't depend on enabled)
     const enterFullscreen = useCallback(async () => {
