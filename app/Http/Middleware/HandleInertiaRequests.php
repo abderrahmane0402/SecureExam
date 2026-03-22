@@ -35,11 +35,25 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $assignedExamIds = [];
+
+        if ($user && $user->isStudent()) {
+            $assignedExamIds = \App\Models\Exam::query()
+                ->whereHas('assignments', function ($query) use ($user) {
+                    $query->where('student_id', $user->id);
+                })
+                ->where('is_published', true)
+                ->pluck('id')
+                ->toArray();
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'assigned_exam_ids' => array_values($assignedExamIds),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

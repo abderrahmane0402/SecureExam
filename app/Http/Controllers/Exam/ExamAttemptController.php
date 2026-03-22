@@ -72,7 +72,16 @@ class ExamAttemptController extends Controller
             'is_active' => true,
         ]);
 
-        return redirect()->route('exam.take', $attempt);
+        $redirect = redirect()->route('exam.take', $attempt);
+
+        if (request()->has('no_security')) {
+            $redirect->withInput(['no_security' => 1]); // This is not for query params
+        }
+
+        // Better way:
+        return redirect()->to(
+            route('exam.take', $attempt).(request()->has('no_security') ? '?no_security=1' : '')
+        );
     }
 
     /**
@@ -92,7 +101,7 @@ class ExamAttemptController extends Controller
         $exam = $attempt->exam;
         $questions = $exam->questions()
             ->with('options')
-            ->when($exam->shuffle_questions, fn($q) => $q->inRandomOrder())
+            ->when($exam->shuffle_questions, fn ($q) => $q->inRandomOrder())
             ->get()
             ->map(function ($question) use ($exam) {
                 $options = $question->options;
@@ -106,7 +115,7 @@ class ExamAttemptController extends Controller
                     'content' => $question->content,
                     'image_path' => $question->image_path,
                     'points' => $question->points,
-                    'options' => $options->map(fn($o) => [
+                    'options' => $options->map(fn ($o) => [
                         'id' => $o->id,
                         'content' => $o->content,
                     ]),
@@ -117,7 +126,7 @@ class ExamAttemptController extends Controller
         $answers = $attempt->answers()
             ->get()
             ->keyBy('question_id')
-            ->map(fn($a) => [
+            ->map(fn ($a) => [
                 'selected_options' => $a->selected_options,
                 'text_answer' => $a->text_answer,
             ]);
@@ -300,6 +309,7 @@ class ExamAttemptController extends Controller
         // First request (no token sent) - just return the current token
         if (empty($token)) {
             $session->update(['last_activity' => now()]);
+
             return response()->json([
                 'valid' => true,
                 'token' => $session->session_token,

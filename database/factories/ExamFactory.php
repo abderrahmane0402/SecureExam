@@ -23,6 +23,7 @@ class ExamFactory extends Factory
         return [
             'instructor_id' => User::factory()->instructor(),
             'title' => fake()->sentence(4),
+            'type' => 'auto',
             'description' => fake()->paragraph(),
             'duration_minutes' => fake()->randomElement([30, 45, 60, 90, 120]),
             'start_time' => $startTime,
@@ -41,7 +42,7 @@ class ExamFactory extends Factory
      */
     public function published(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_published' => true,
         ]);
     }
@@ -51,7 +52,7 @@ class ExamFactory extends Factory
      */
     public function active(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'start_time' => now()->subHour(),
             'end_time' => now()->addDays(7),
             'is_published' => true,
@@ -63,7 +64,7 @@ class ExamFactory extends Factory
      */
     public function ended(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'start_time' => now()->subWeek(),
             'end_time' => now()->subDay(),
             'is_published' => true,

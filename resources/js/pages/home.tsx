@@ -27,9 +27,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
     LanguageProvider,
-    useLanguage,
-    type Language,
+    useLanguage
+    
 } from '@/hooks/use-language';
+import type {Language} from '@/hooks/use-language';
 
 export default function Home({
     canRegister = true,

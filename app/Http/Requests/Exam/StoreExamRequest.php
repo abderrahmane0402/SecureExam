@@ -23,6 +23,7 @@ class StoreExamRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'string', 'in:auto,hybrid'],
             'description' => ['nullable', 'string', 'max:5000'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:480'],
             'start_time' => ['required', 'date', 'after_or_equal:now'],

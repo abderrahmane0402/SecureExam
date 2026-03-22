@@ -13,9 +13,14 @@ class Exam extends Model
     /** @use HasFactory<\Database\Factories\ExamFactory> */
     use HasFactory;
 
+    public const TYPE_AUTO = 'auto';
+
+    public const TYPE_HYBRID = 'hybrid';
+
     protected $fillable = [
         'instructor_id',
         'title',
+        'type',
         'description',
         'duration_minutes',
         'start_time',

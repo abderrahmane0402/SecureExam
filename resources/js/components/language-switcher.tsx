@@ -6,7 +6,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useLanguageStandalone, type Language } from '@/hooks/use-language';
+import { useLanguageStandalone  } from '@/hooks/use-language';
+import type {Language} from '@/hooks/use-language';
 
 interface LanguageSwitcherProps {
     variant?: 'default' | 'ghost' | 'outline';

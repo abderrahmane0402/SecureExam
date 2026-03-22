@@ -24,8 +24,9 @@ class AssignStudentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'student_ids' => ['required', 'array', 'min:1'],
+            'student_ids' => ['required_without:emails', 'nullable', 'array'],
             'student_ids.*' => ['integer', 'exists:users,id'],
+            'emails' => ['required_without:student_ids', 'nullable', 'string'],
         ];
     }
 
@@ -35,7 +36,8 @@ class AssignStudentsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'student_ids.required' => 'Please select at least one student.',
+            'student_ids.required_without' => 'Please select students or provide emails.',
+            'emails.required_without' => 'Please select students or provide emails.',
             'student_ids.*.exists' => 'One or more selected students do not exist.',
         ];
     }

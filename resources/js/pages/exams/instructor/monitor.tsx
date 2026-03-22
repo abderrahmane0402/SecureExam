@@ -1,5 +1,5 @@
 import { Head, router, usePoll } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEcho } from '@laravel/echo-react';
 import {
     AlertTriangleIcon,
     CheckCircleIcon,
@@ -9,13 +9,17 @@ import {
     XCircleIcon,
     RotateCcwIcon,
     TrashIcon,
-    UserIcon,
     ShieldAlertIcon,
     MoreVerticalIcon,
     HistoryIcon,
     ActivityIcon,
+    PauseIcon,
+    PlayIcon,
+    MailIcon,
 } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -24,7 +28,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,13 +36,16 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useLanguage  } from '@/hooks/use-language';
+import type {TranslationKey} from '@/hooks/use-language';
+import AppLayout from '@/layouts/app-layout';
 import type {
     BreadcrumbItem,
     Exam,
@@ -47,7 +53,6 @@ import type {
     User,
     ViolationLog,
 } from '@/types';
-import { useLanguage, type TranslationKey } from '@/hooks/use-language';
 
 interface ActiveStudent {
     user: User;
@@ -93,6 +98,48 @@ export default function MonitorExam({
     const { t } = useLanguage();
     const [refreshing, setRefreshing] = useState(false);
     const [isPolling, setIsPolling] = useState(true);
+    const [currentTime, setCurrentTime] = useState(() => Date.now());
+    const [broadcastMessage, setBroadcastMessage] = useState('');
+    const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+    // Real-time Live Proctoring Events
+    useEcho(
+        `exam-monitoring.${exam.id}`,
+        'ExamViolationLogged',
+        (e: any) => {
+            toast.error(`Violation: ${e.student_name}`, {
+                description: `${e.type} (${e.severity})`,
+                duration: 5000,
+            });
+            // Fetch fresh data instantly without waiting for the next poll tick
+            router.reload({
+                only: ['recentViolations', 'activeStudents', 'attempts'],
+            });
+        }
+    );
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(Date.now());
+        }, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleBroadcast = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!broadcastMessage.trim()) return;
+
+        setIsBroadcasting(true);
+        router.post(`/exams/${exam.id}/broadcast`, {
+            message: broadcastMessage
+        }, {
+            onSuccess: () => {
+                setBroadcastMessage('');
+                toast.success('Message broadcasted to all students');
+            },
+            onFinish: () => setIsBroadcasting(false)
+        });
+    };
 
     // Inertia v2 Polling
     usePoll(10000, {
@@ -105,7 +152,6 @@ export default function MonitorExam({
             'recentViolations',
         ],
     }, {
-        keepScroll: true,
         autoStart: isPolling
     });
 
@@ -148,6 +194,21 @@ export default function MonitorExam({
         }
     };
 
+    const handleTogglePause = (attemptId: number) => {
+        router.post(`/exams/${exam.id}/attempts/${attemptId}/toggle-pause`);
+    };
+
+    const handleExtendTime = (attemptId: number) => {
+        const mins = prompt('How many minutes to add?', '10');
+        if (mins) {
+            const minutes = parseInt(mins);
+            if (isNaN(minutes)) return;
+            router.post(`/exams/${exam.id}/attempts/${attemptId}/extend-time`, {
+                minutes: minutes
+            });
+        }
+    };
+
     const formatDateTime = (date: string) => new Date(date).toLocaleString();
 
     const getStatusBadge = (status: string) => {
@@ -161,7 +222,7 @@ export default function MonitorExam({
     };
 
     const getTimeAgo = (date: string) => {
-        const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+        const seconds = Math.floor((currentTime - new Date(date).getTime()) / 1000);
         if (seconds < 60) return `${seconds}${t('monitor.secShort')} ${t('monitor.ago')}`;
         if (seconds < 3600) return `${Math.floor(seconds / 60)}${t('monitor.minShort')} ${t('monitor.ago')}`;
         return `${Math.floor(seconds / 3600)}${t('monitor.hourShort')} ${t('monitor.ago')}`;
@@ -267,6 +328,45 @@ export default function MonitorExam({
                     ))}
                 </div>
 
+                {/* Broadcast System */}
+                <Card className="rounded-[2.5rem] border-none shadow-2xl bg-slate-900 text-white overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                        <MailIcon className="size-32 rotate-12" />
+                    </div>
+                    <CardContent className="p-8 relative z-10">
+                        <div className="flex flex-col md:flex-row items-center gap-8">
+                            <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="size-2 rounded-full bg-blue-400 animate-pulse" />
+                                    <h2 className="text-sm font-black uppercase tracking-[0.3em] text-blue-400 italic">Global Broadcast</h2>
+                                </div>
+                                <h3 className="text-2xl font-black tracking-tight leading-none">Communicate with all students.</h3>
+                                <p className="text-slate-400 text-xs font-medium max-w-sm uppercase tracking-wider">Messages appear instantly on every active student's screen.</p>
+                            </div>
+                            
+                            <form onSubmit={handleBroadcast} className="flex-1 w-full flex gap-3">
+                                <div className="relative flex-1">
+                                    <Input
+                                        placeholder="Type your message to the class..."
+                                        value={broadcastMessage}
+                                        onChange={(e) => setBroadcastMessage(e.target.value)}
+                                        className="h-14 bg-white/5 border-white/10 text-white placeholder:text-slate-500 rounded-2xl pl-6 pr-12 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 font-black text-[10px]">
+                                        {broadcastMessage.length}/500
+                                    </div>
+                                </div>
+                                <Button 
+                                    disabled={isBroadcasting || !broadcastMessage.trim()}
+                                    className="h-14 rounded-2xl px-8 font-black uppercase tracking-widest text-xs bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
+                                >
+                                    {isBroadcasting ? 'Sending...' : 'Broadcast'}
+                                </Button>
+                            </form>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <div className="grid gap-8 lg:grid-cols-12">
                     {/* Active Students - Primary Blue Theme */}
                     <div className="lg:col-span-8 space-y-6">
@@ -282,7 +382,7 @@ export default function MonitorExam({
                         {activeStudents.length > 0 ? (
                             <div className="grid gap-6 sm:grid-cols-2">
                                 {activeStudents.map(({ user, attempt, last_activity }) => {
-                                    const progress = Math.round((attempt.answers_count / exam.questions_count) * 100);
+                                    const progress = Math.round((attempt.answers_count / (exam.questions_count || 1)) * 100);
                                     const violations = attempt.violation_logs?.length || 0;
                                     const isCritical = violations >= 5;
 
@@ -313,6 +413,19 @@ export default function MonitorExam({
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-2xl border-none ring-1 ring-slate-200 dark:ring-slate-800">
                                                             <DropdownMenuLabel className="px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground">Student Controls</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => handleTogglePause(attempt.id)} className="rounded-xl px-3 py-2 font-bold">
+                                                                {attempt.is_paused ? (
+                                                                    <PlayIcon className="mr-2 size-4 text-emerald-500" />
+                                                                ) : (
+                                                                    <PauseIcon className="mr-2 size-4 text-amber-500" />
+                                                                )}
+                                                                {attempt.is_paused ? 'Resume Exam' : 'Pause Exam'}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleExtendTime(attempt.id)} className="rounded-xl px-3 py-2 font-bold">
+                                                                <ClockIcon className="mr-2 size-4 text-blue-500" />
+                                                                Extend Time
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator className="my-2" />
                                                             <DropdownMenuItem onClick={() => handleForceSubmit(attempt.id)} className="rounded-xl px-3 py-2 text-destructive focus:bg-destructive/10 focus:text-destructive font-bold">
                                                                 <XCircleIcon className="mr-2 size-4" />
                                                                 {t('monitor.action.forceSubmit')}
@@ -459,7 +572,7 @@ export default function MonitorExam({
                                                                 {violation.attempt?.student?.name}
                                                             </span>
                                                         </div>
-                                                        {violation.duration_seconds > 0 && (
+                                                        {(violation.duration_seconds ?? 0) > 0 && (
                                                             <Badge variant="outline" className="h-5 px-1.5 text-[9px] font-black border-slate-200 rounded-lg">
                                                                 {violation.duration_seconds}s
                                                             </Badge>
@@ -539,11 +652,11 @@ export default function MonitorExam({
                                                                 <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                                                                     <div
                                                                         className="h-full bg-primary"
-                                                                        style={{ width: `${Math.round((attempt.answers_count / exam.questions_count) * 100)}%` }}
+                                                                        style={{ width: `${Math.round((attempt.answers_count / (exam.questions_count || 1)) * 100)}%` }}
                                                                     />
                                                                 </div>
                                                                 <span className="text-[10px] font-black tracking-widest tabular-nums">
-                                                                    {Math.round((attempt.answers_count / exam.questions_count) * 100)}%
+                                                                    {Math.round((attempt.answers_count / (exam.questions_count || 1)) * 100)}%
                                                                 </span>
                                                             </div>
                                                             <p className="text-[9px] font-black text-muted-foreground/50 tracking-widest text-right">

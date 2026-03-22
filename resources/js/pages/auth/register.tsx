@@ -1,4 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
+import { GraduationCap, Users } from 'lucide-react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
@@ -9,8 +11,6 @@ import { useLanguageStandalone } from '@/hooks/use-language';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import { GraduationCap, Users } from 'lucide-react';
-import { useState } from 'react';
 
 export default function Register() {
     const { t } = useLanguageStandalone();

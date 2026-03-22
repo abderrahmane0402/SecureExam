@@ -3,9 +3,10 @@ import {
     useContext,
     useState,
     useCallback,
-    useEffect,
-    type ReactNode,
+    useEffect
+    
 } from 'react';
+import type {ReactNode} from 'react';
 
 export type Language = 'en' | 'fr';
 
@@ -232,6 +233,9 @@ const translations = {
         'exam.take.rule4': 'Violations will be recorded and may result in automatic submission',
         'exam.take.rule5': 'Time limit:',
         'exam.take.start': 'Start Exam',
+        'exam.take.fullscreenRequired': 'Fullscreen Required',
+        'exam.take.fullscreenDesc': 'This exam must be taken in fullscreen mode to ensure a secure environment.',
+        'exam.take.enterFullscreen': 'Enter Fullscreen',
         'exam.take.locked': 'Exam Locked',
         'exam.take.lockedReason': 'Your exam timer is still running. Click below to return to fullscreen and continue your exam.',
         'exam.take.returnWithin': 'Please return to fullscreen within {0} seconds to avoid automatic submission.',
@@ -547,6 +551,9 @@ const translations = {
         'exam.take.rule4': 'Les violations seront enregistrées et peuvent entraîner une soumission automatique',
         'exam.take.rule5': 'Limite de temps :',
         'exam.take.start': 'Commencer l’Examen',
+        'exam.take.fullscreenRequired': 'Plein Écran Requis',
+        'exam.take.fullscreenDesc': 'Cet examen doit être passé en mode plein écran pour garantir un environnement sécurisé.',
+        'exam.take.enterFullscreen': 'Passer en Plein Écran',
         'exam.take.locked': 'Examen Verrouillé',
         'exam.take.lockedReason': 'Le minuteur de votre examen tourne toujours. Cliquez ci-dessous pour revenir en plein écran et continuer votre examen.',
         'exam.take.returnWithin': 'Veuillez revenir en plein écran dans {0} secondes pour éviter la soumission automatique.',
@@ -636,7 +643,7 @@ type TranslationKey = keyof typeof translations.en;
 interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (key: TranslationKey) => string;
+    t: (key: TranslationKey, params?: any[]) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
@@ -662,7 +669,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
     const t = useCallback(
         (key: TranslationKey, params?: any[]): string => {
-            let translation = translations[language][key] || key;
+            let translation: string = translations[language][key] || key;
             if (params) {
                 params.forEach((param, index) => {
                     translation = translation.replace(`{${index}}`, String(param));
@@ -734,7 +741,7 @@ export function useLanguageStandalone() {
 
     const t = useCallback(
         (key: TranslationKey, params?: any[]): string => {
-            let translation = translations[language][key] || key;
+            let translation: string = translations[language][key] || key;
             if (params) {
                 params.forEach((param, index) => {
                     translation = translation.replace(`{${index}}`, String(param));

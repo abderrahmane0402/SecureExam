@@ -22,6 +22,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                             asChild
                             isActive={isCurrentUrl(item.href)}
                             tooltip={{ children: item.title }}
+                            data-test={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                         >
                             <Link href={item.href} prefetch>
                                 {item.icon && <item.icon />}

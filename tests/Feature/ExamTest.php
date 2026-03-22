@@ -22,7 +22,7 @@ describe('Instructor Exams', function () {
 
         $response->assertOk();
         $response->assertInertia(
-            fn($page) => $page
+            fn ($page) => $page
                 ->component('exams/instructor/index')
                 ->has('exams.data', 1)
         );
@@ -31,6 +31,7 @@ describe('Instructor Exams', function () {
     it('can create an exam', function () {
         $examData = [
             'title' => 'Test Exam',
+            'type' => 'auto',
             'description' => 'A test exam',
             'duration_minutes' => 60,
             'start_time' => now()->addDay()->toDateTimeString(),
@@ -87,6 +88,26 @@ describe('Instructor Exams', function () {
             'exam_id' => $exam->id,
             'student_id' => $this->student->id,
         ]);
+    });
+
+    it('can bulk assign students to an exam via emails', function () {
+        $exam = Exam::factory()->for($this->instructor, 'instructor')->create();
+        $student1 = User::factory()->create(['role' => User::ROLE_STUDENT, 'email' => 'student1@example.com']);
+        $student2 = User::factory()->create(['role' => User::ROLE_STUDENT, 'email' => 'student2@example.com']);
+        
+        $response = $this->actingAs($this->instructor)->post("/exams/{$exam->id}/assign", [
+            'emails' => "student1@example.com, student2@example.com\nnonexistent@example.com",
+            'student_ids' => [$this->student->id], // Mix of IDs and emails
+        ]);
+
+        $response->assertRedirect();
+        
+        // Should have all 3 students assigned
+        $this->assertDatabaseHas('exam_assignments', ['exam_id' => $exam->id, 'student_id' => $this->student->id]);
+        $this->assertDatabaseHas('exam_assignments', ['exam_id' => $exam->id, 'student_id' => $student1->id]);
+        $this->assertDatabaseHas('exam_assignments', ['exam_id' => $exam->id, 'student_id' => $student2->id]);
+        
+        expect($exam->assignedStudents()->count())->toBe(3);
     });
 
     it('prevents students from creating exams', function () {
@@ -173,7 +194,7 @@ describe('Exam Grading', function () {
             ->for($question)
             ->create(['selected_options' => [$correctOption->id]]);
 
-        $service = new ExamGradingService();
+        $service = new ExamGradingService;
         $service->gradeAnswer($answer);
 
         $answer->refresh();
@@ -209,7 +230,7 @@ describe('Exam Grading', function () {
             ->for($question)
             ->create(['selected_options' => [$trueOption->id]]);
 
-        $service = new ExamGradingService();
+        $service = new ExamGradingService;
         $service->gradeAnswer($answer);
 
         $answer->refresh();
@@ -234,7 +255,7 @@ describe('Exam Grading', function () {
             ->for($question)
             ->create(['text_answer' => 'This is my essay response.']);
 
-        $service = new ExamGradingService();
+        $service = new ExamGradingService;
         $service->gradeAnswer($answer);
 
         $answer->refresh();

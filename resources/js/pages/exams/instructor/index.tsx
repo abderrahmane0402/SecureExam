@@ -7,7 +7,7 @@ import {
     MonitorIcon,
     EyeIcon,
 } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -16,7 +16,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Exam } from '@/types';
 
 interface Props {

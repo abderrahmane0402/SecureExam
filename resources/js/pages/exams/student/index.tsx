@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { ClockIcon, FileTextIcon, CalendarIcon, PlayIcon } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -9,10 +9,10 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/hooks/use-language';
+import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 import type { ExamForStudent } from '@/types/exam';
-import { useLanguage } from '@/hooks/use-language';
 
 interface Props {
     exams: ExamForStudent[];

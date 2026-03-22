@@ -5,7 +5,7 @@ import {
     ClockIcon,
     AlertTriangleIcon,
 } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -14,7 +14,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import AppLayout from '@/layouts/app-layout';
 import type {
     BreadcrumbItem,
     Exam,
@@ -37,8 +37,6 @@ export default function StudentExamResults({ exam, attempt }: Props) {
     const passed = exam.passing_score
         ? (attempt.score || 0) >= exam.passing_score
         : null;
-
-    const formatDate = (date: string) => new Date(date).toLocaleString();
 
     const getAnswerForQuestion = (questionId: number) =>
         attempt.answers?.find((a) => a.question_id === questionId);

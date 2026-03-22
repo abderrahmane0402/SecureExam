@@ -47,6 +47,7 @@ export interface Exam {
     id: number;
     instructor_id: number;
     title: string;
+    type: 'auto' | 'hybrid';
     description: string | null;
     duration_minutes: number;
     start_time: string;
@@ -141,6 +142,8 @@ export interface ExamAttempt {
     submitted_at: string | null;
     graded_at: string | null;
     status: AttemptStatus;
+    is_paused: boolean;
+    extra_time_minutes: number;
     score: number | null;
     points_earned: number | null;
     total_points: number | null;
@@ -182,6 +185,7 @@ export interface ExamTakingData {
         started_at: string;
         remaining_time: number;
         violation_count: number;
+        is_paused: boolean;
     };
     exam: {
         id: number;

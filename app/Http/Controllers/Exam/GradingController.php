@@ -90,7 +90,7 @@ class GradingController extends Controller
                     'content' => $question->content,
                     'points' => $question->points,
                     'correct_answer' => $question->correct_answer,
-                    'options' => $question->options->map(fn($o) => [
+                    'options' => $question->options->map(fn ($o) => [
                         'id' => $o->id,
                         'content' => $o->content,
                         'is_correct' => $o->is_correct,
@@ -216,6 +216,53 @@ class GradingController extends Controller
             $this->gradingService->gradeAttempt($attempt);
         }
 
-        return back()->with('success', 'Auto-grading completed for ' . $attempts->count() . ' attempts.');
+        return back()->with('success', 'Auto-grading completed for '.$attempts->count().' attempts.');
+    }
+
+    /**
+     * Export exam results to CSV.
+     */
+    public function exportCsv(int $examId): mixed
+    {
+        $exam = Exam::findOrFail($examId);
+        Gate::authorize('view', $exam);
+
+        $attempts = ExamAttempt::query()
+            ->where('exam_id', $examId)
+            ->with('student:id,name,email')
+            ->orderBy('status')
+            ->get();
+
+        $filename = 'results_'.str_replace(' ', '_', strtolower($exam->title)).'_'.date('Y-m-d').'.csv';
+
+        $headers = [
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=$filename",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($attempts) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Student Name', 'Email', 'Status', 'Score', 'Total Points', 'Percentage', 'Violations', 'Submitted At']);
+
+            foreach ($attempts as $attempt) {
+                fputcsv($file, [
+                    $attempt->student->name,
+                    $attempt->student->email,
+                    strtoupper($attempt->status),
+                    $attempt->score ?? 'N/A',
+                    $attempt->total_points ?? 'N/A',
+                    $attempt->percentage ? $attempt->percentage.'%' : 'N/A',
+                    $attempt->violation_count,
+                    $attempt->submitted_at ?? 'N/A',
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

@@ -1,14 +1,4 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     BookOpen,
     Users,
@@ -23,8 +13,19 @@ import {
     AlertTriangle,
     Lightbulb,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLanguageStandalone  } from '@/hooks/use-language';
+import type {TranslationKey} from '@/hooks/use-language';
+import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, User } from '@/types';
-import { useLanguageStandalone, type TranslationKey } from '@/hooks/use-language';
 
 type TFunction = (key: TranslationKey) => string;
 

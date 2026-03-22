@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
 import { BookOpen } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { home } from '@/routes';
 import { useLanguageStandalone } from '@/hooks/use-language';
+import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
 export default function AuthSimpleLayout({

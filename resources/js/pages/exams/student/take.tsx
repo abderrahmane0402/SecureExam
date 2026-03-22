@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import {
     AlertTriangleIcon,
     ArrowLeftIcon,
@@ -10,8 +11,11 @@ import {
     SendIcon,
     MaximizeIcon,
     ShieldAlertIcon,
+    MailIcon,
+    PauseIcon,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +28,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useExamSecurity } from '@/hooks/use-exam-security';
 import { useLanguage } from '@/hooks/use-language';
 import type {
@@ -94,6 +99,7 @@ export default function TakeExam({
     const [lastViolationSeverity, setLastViolationSeverity] = useState<
         string | null
     >(null);
+    const [isPaused, setIsPaused] = useState(attempt.is_paused);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const currentQuestion = questions[currentIndex];
@@ -122,6 +128,7 @@ export default function TakeExam({
         reloadCountdown,
         warningMessage,
         clearWarning,
+        hasEnteredFullscreen,
     } = useExamSecurity({
         attemptId: attempt.id,
         examId: exam.id,
@@ -137,11 +144,33 @@ export default function TakeExam({
             }, 3000);
         },
         onAutoSubmit: handleAutoSubmit,
-        enabled: examStarted,
+        enabled: examStarted && !new URLSearchParams(window.location.search).has('no_security'),
         initialSessionToken: session_token,
     });
 
-    // Handle starting the exam (requires user gesture for fullscreen)
+    // Real-time Teacher Broadcast Listener
+    useEcho(`exam-room.${exam.id}`, 'TeacherMessageBroadcast', (e: any) => {
+        toast.info(e.message, {
+            icon: <MailIcon className="size-5 text-blue-600" />,
+            description: `From Instructor: ${e.teacher_name}`,
+            duration: Infinity, // Keep it until student dismisses it
+            important: true,
+        });
+    });
+
+    // Real-time Pause Listener
+    useEcho(`exam-room.${exam.id}`, 'ExamAttemptPaused', (e: any) => {
+        if (e.attempt_id === attempt.id) {
+            setIsPaused(e.is_paused);
+            if (e.is_paused) {
+                exitFullscreen();
+            } else {
+                toast.info('Exam Resumed', {
+                    description: 'The instructor has resumed your exam session.',
+                });
+            }
+        }
+    });    // Handle starting the exam (requires user gesture for fullscreen)
     const handleStartExam = async () => {
         const success = await enterFullscreen();
         setIsFullscreen(success);
@@ -165,7 +194,7 @@ export default function TakeExam({
 
     // Timer countdown - only runs after exam starts
     useEffect(() => {
-        if (!examStarted) return;
+        if (!examStarted || isLocked || isFullscreen === false || isPaused) return;
 
         const interval = setInterval(() => {
             setTimeRemaining((prev) => {
@@ -179,7 +208,7 @@ export default function TakeExam({
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [examStarted, handleAutoSubmit]);
+    }, [examStarted, isLocked, isFullscreen, isPaused, handleAutoSubmit]);
 
     // Format time
     const formatTime = (seconds: number) => {
@@ -310,8 +339,8 @@ export default function TakeExam({
 
     const isLowTime = timeRemaining < 300; // Less than 5 minutes
 
-    // Show start screen before exam begins
-    if (!examStarted) {
+    // Show start screen before exam begins (only if they haven't started this attempt yet)
+    if (!examStarted && !hasEnteredFullscreen) {
         return (
             <>
                 <Head title={`${t('exam.take.start')}: ${exam.title}`} />
@@ -343,12 +372,79 @@ export default function TakeExam({
                                 </ul>
                             </div>
                             <Button
+                                type="button"
                                 onClick={handleStartExam}
                                 className="w-full"
                                 size="lg"
                             >
                                 <MaximizeIcon className="mr-2 size-5" />
                                 {t('exam.take.start')}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            </>
+        );
+    }
+
+    // Show paused screen if the exam is paused by the instructor
+    if (isPaused) {
+        return (
+            <>
+                <Head title="Exam Paused" />
+                <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm text-white p-6 text-center">
+                    <div className="mb-8 rounded-full bg-amber-500/20 p-6 ring-1 ring-amber-500/50">
+                        <PauseIcon className="size-16 text-amber-500 animate-pulse" />
+                    </div>
+                    <h2 className="text-4xl font-black tracking-tight uppercase mb-4">Exam Paused</h2>
+                    <p className="text-xl text-slate-300 max-w-lg font-medium leading-relaxed mb-8">
+                        The instructor has temporarily paused your exam session. Please wait for further instructions.
+                    </p>
+                    <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-500 bg-white/5 px-6 py-3 rounded-2xl border border-white/10 italic">
+                        <div className="size-2 rounded-full bg-emerald-500 animate-ping" />
+                        Awaiting Instructor Signal...
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    // Show fullscreen enforcement screen if not in fullscreen
+    if (!isFullscreen && !new URLSearchParams(window.location.search).has('no_security')) {
+        return (
+            <>
+                <Head title={t('exam.take.fullscreenRequired')} />
+                <div className="flex min-h-screen items-center justify-center bg-background p-4">
+                    <Card className="w-full max-w-md">
+                        <CardHeader className="text-center">
+                            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
+                                <MaximizeIcon className="size-8 text-primary" />
+                            </div>
+                            <CardTitle className="text-xl">
+                                {t('exam.take.fullscreenRequired')}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-center">
+                            <p className="text-muted-foreground">
+                                {t('exam.take.fullscreenDesc')}
+                            </p>
+
+                            {reloadCountdown !== null && (
+                                <div className="rounded-md bg-red-50 p-3 text-red-700">
+                                    <p className="font-medium animate-pulse">
+                                        {t('exam.take.returnWithin', [reloadCountdown])}
+                                    </p>
+                                </div>
+                            )}
+
+                            <Button
+                                type="button"
+                                onClick={isLocked ? returnToExam : enterFullscreen}
+                                className="w-full"
+                                size="lg"
+                            >
+                                <MaximizeIcon className="mr-2 size-5" />
+                                {isLocked ? t('exam.take.return') : t('exam.take.enterFullscreen')}
                             </Button>
                         </CardContent>
                     </Card>
@@ -404,7 +500,7 @@ export default function TakeExam({
 
                 {/* Warning Message Toast - shown after returning from long absence */}
                 {warningMessage && (
-                    <div className="fixed top-4 left-1/2 z-[101] -translate-x-1/2 animate-in slide-in-from-top">
+                    <div className="fixed bottom-4 left-4 z-[101] animate-in slide-in-from-bottom-2">
                         <div className="flex max-w-lg items-center gap-3 rounded-lg bg-amber-600 px-6 py-4 text-white shadow-lg">
                             <AlertTriangleIcon className="size-6 shrink-0" />
                             <div className="flex-1">
@@ -425,7 +521,7 @@ export default function TakeExam({
 
                 {/* Violation Warning Toast */}
                 {showViolationWarning && !warningMessage && (
-                    <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 animate-in slide-in-from-top">
+                    <div className="fixed bottom-4 left-4 z-50 animate-in slide-in-from-bottom-2">
                         <div
                             className={`flex items-center gap-2 rounded-lg px-6 py-3 text-white shadow-lg ${
                                 lastViolationSeverity === 'critical'
@@ -500,7 +596,7 @@ export default function TakeExam({
                                 {formatTime(timeRemaining)}
                             </div>
 
-                            <Button onClick={handleSubmit}>
+                            <Button data-test="header-submit-button" onClick={handleSubmit}>
                                 <SendIcon className="size-4" />
                                 {t('exam.take.submit')}
                             </Button>
@@ -743,7 +839,7 @@ export default function TakeExam({
 
                                     {/* Essay */}
                                     {currentQuestion.type === 'essay' && (
-                                        <textarea
+                                        <Textarea
                                             value={
                                                 currentAnswer?.text_answer || ''
                                             }
@@ -751,8 +847,7 @@ export default function TakeExam({
                                                 handleTextAnswer(e.target.value)
                                             }
                                             placeholder={t('exam.take.essayPlaceholder')}
-                                            rows={10}
-                                            className="w-full resize-y rounded-lg border p-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary"
+                                            className="w-full text-lg"
                                         />
                                     )}
                                 </CardContent>
@@ -817,7 +912,7 @@ export default function TakeExam({
                         <Button variant="outline" onClick={handleCancelSubmit}>
                             {t('common.cancel')}
                         </Button>
-                        <Button onClick={handleConfirmSubmit}>
+                        <Button data-test="confirm-submit-button" onClick={handleConfirmSubmit}>
                             {t('exam.take.submit')}
                         </Button>
                     </DialogFooter>

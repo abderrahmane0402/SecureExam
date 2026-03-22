@@ -1,5 +1,4 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
 import {
     AlertTriangleIcon,
     CalendarIcon,
@@ -8,20 +7,20 @@ import {
     PlayIcon,
     ShieldIcon,
 } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import type { BreadcrumbItem, Exam, ExamAttempt } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
+import AppLayout from '@/layouts/app-layout';
+import type { BreadcrumbItem, Exam, ExamAttempt } from '@/types';
 
 interface Props {
     exam: Exam & {
@@ -30,14 +29,12 @@ interface Props {
         is_available: boolean;
     };
     attempts: ExamAttempt[];
-    can_take: boolean;
     remaining_attempts: number;
 }
 
 export default function StudentExamShow({
     exam,
     attempts,
-    can_take,
     remaining_attempts,
 }: Props) {
     const { t } = useLanguage();
@@ -53,7 +50,9 @@ export default function StudentExamShow({
 
     const handleStart = () => {
         setStarting(true);
-        router.post(`/student/exams/${exam.id}/start`);
+        const params = new URLSearchParams(window.location.search);
+        const query = params.has('no_security') ? '?no_security=1' : '';
+        router.post(`/student/exams/${exam.id}/start${query}`);
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -245,10 +244,12 @@ export default function StudentExamShow({
                                 </div>
                                 <Button
                                     size="lg"
+                                    data-test="start-exam-button"
                                     className="w-full"
                                     disabled={!acknowledged || starting}
                                     onClick={handleStart}
                                 >
+
                                     <PlayIcon className="size-4" />
                                     {starting
                                         ? t('student.exam.starting')

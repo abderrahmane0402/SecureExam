@@ -1,0 +1,13 @@
+        onViolation: (type, count, severity) => {
+            setViolationCount(count);
+            setLastViolationSeverity(severity);
+            setShowViolationWarning(true);
+            setTimeout(() => {
+                setShowViolationWarning(false);
+                setLastViolationSeverity(null);
+            }, 3000);
+        },
+        onAutoSubmit: handleAutoSubmit,
+        enabled: examStarted && !new URLSearchParams(window.location.search).has('no_security'),
+        initialSessionToken: attempt.session_token,
+    });

@@ -28,6 +28,8 @@ class ExamAttempt extends Model
         'started_at',
         'submitted_at',
         'status',
+        'is_paused',
+        'extra_time_minutes',
         'score',
         'total_points',
         'percentage',
@@ -49,6 +51,8 @@ class ExamAttempt extends Model
             'total_points' => 'decimal:2',
             'percentage' => 'decimal:2',
             'auto_submitted' => 'boolean',
+            'is_paused' => 'boolean',
+            'extra_time_minutes' => 'integer',
         ];
     }
 
@@ -98,7 +102,7 @@ class ExamAttempt extends Model
             return 0;
         }
 
-        $endTime = $this->started_at->addMinutes($this->exam->duration_minutes);
+        $endTime = $this->started_at->addMinutes($this->exam->duration_minutes + $this->extra_time_minutes);
         $remaining = now()->diffInSeconds($endTime, false);
 
         return max(0, $remaining);

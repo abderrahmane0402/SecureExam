@@ -4,6 +4,7 @@ use App\Http\Controllers\Exam\ExamAttemptController;
 use App\Http\Controllers\Exam\ExamController;
 use App\Http\Controllers\Exam\GradingController;
 use App\Http\Controllers\Exam\QuestionController;
+use App\Http\Controllers\Exam\StudentController;
 use App\Http\Controllers\Exam\StudentExamController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::middleware('can:viewAny,App\Models\Exam')->group(function (): void {
         // Exam CRUD
         Route::resource('exams', ExamController::class);
+
+        // Student Management
+        Route::get('students', [StudentController::class, 'index'])->name('students.index');
+        Route::post('students/import', [StudentController::class, 'importCsv'])->name('students.import');
+        Route::delete('students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
 
         // Exam management
         Route::post('exams/{exam}/toggle-publish', [ExamController::class, 'togglePublish'])
@@ -45,6 +51,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('exams.attempts.reset-violations');
         Route::post('exams/{exam}/attempts/{attempt}/force-submit', [ExamController::class, 'forceSubmit'])
             ->name('exams.attempts.force-submit');
+        Route::post('exams/{exam}/attempts/{attempt}/toggle-pause', [ExamController::class, 'togglePause'])
+            ->name('exams.attempts.toggle-pause');
+        Route::post('exams/{exam}/attempts/{attempt}/extend-time', [ExamController::class, 'extendTime'])
+            ->name('exams.attempts.extend-time');
+        Route::post('exams/{exam}/broadcast', [ExamController::class, 'broadcastMessage'])
+            ->name('exams.broadcast');
 
         // Questions
         Route::post('exams/{exam}/questions', [QuestionController::class, 'store'])
@@ -55,10 +67,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('exams.questions.destroy');
         Route::post('exams/{exam}/questions/reorder', [QuestionController::class, 'reorder'])
             ->name('exams.questions.reorder');
+        Route::post('exams/{exam}/questions/import-aiken', [QuestionController::class, 'importAiken'])
+            ->name('exams.questions.import-aiken');
 
         // Grading
         Route::get('grading/{examId}', [GradingController::class, 'index'])
             ->name('grading.index');
+        Route::get('grading/{examId}/export', [GradingController::class, 'exportCsv'])
+            ->name('grading.export');
         Route::get('grading/attempt/{attempt}', [GradingController::class, 'show'])
             ->name('grading.show');
         Route::post('grading/attempt/{attempt}/answer', [GradingController::class, 'gradeAnswer'])

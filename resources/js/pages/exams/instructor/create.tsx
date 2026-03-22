@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -8,10 +8,18 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import InputError from '@/components/input-error';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -23,6 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function CreateExam() {
     const { data, setData, post, processing, errors } = useForm({
         title: '',
+        type: 'auto',
         description: '',
         duration_minutes: 60,
         start_time: '',
@@ -61,29 +70,53 @@ export default function CreateExam() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="title">Title *</Label>
-                                <Input
-                                    id="title"
-                                    value={data.title}
-                                    onChange={(e) =>
-                                        setData('title', e.target.value)
-                                    }
-                                    placeholder="e.g., Midterm Exam - Chapter 1-5"
-                                />
-                                <InputError message={errors.title} />
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="title">Title *</Label>
+                                    <Input
+                                        id="title"
+                                        value={data.title}
+                                        onChange={(e) =>
+                                            setData('title', e.target.value)
+                                        }
+                                        placeholder="e.g., Midterm Exam"
+                                    />
+                                    <InputError message={errors.title} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="type">Correction Type *</Label>
+                                    <Select
+                                        value={data.type}
+                                        onValueChange={(value) =>
+                                            setData('type', value)
+                                        }
+                                    >
+                                        <SelectTrigger id="type">
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="auto">
+                                                Auto-Correction (MCQ only)
+                                            </SelectItem>
+                                            <SelectItem value="hybrid">
+                                                Hybrid (Includes Free Text)
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={errors.type} />
+                                </div>
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
-                                <textarea
+                                <Textarea
                                     id="description"
                                     value={data.description}
                                     onChange={(e) =>
                                         setData('description', e.target.value)
                                     }
                                     placeholder="Instructions or notes for students..."
-                                    className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 />
                                 <InputError message={errors.description} />
                             </div>

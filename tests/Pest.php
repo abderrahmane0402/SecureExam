@@ -1,5 +1,9 @@
 <?php
 
+pest()->extend(Tests\DuskTestCase::class)
+    ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
+    ->in('Browser');
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -41,7 +45,22 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Create an instructor user.
+ */
+function createInstructor(array $attributes = []): \App\Models\User
 {
-    // ..
+    return \App\Models\User::factory()->create(array_merge([
+        'role' => \App\Models\User::ROLE_INSTRUCTOR,
+    ], $attributes));
+}
+
+/**
+ * Create a student user.
+ */
+function createStudent(array $attributes = []): \App\Models\User
+{
+    return \App\Models\User::factory()->create(array_merge([
+        'role' => \App\Models\User::ROLE_STUDENT,
+    ], $attributes));
 }

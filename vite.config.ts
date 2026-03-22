@@ -24,4 +24,12 @@ export default defineConfig({
     esbuild: {
         jsx: 'automatic',
     },
+    server: {
+        host: '0.0.0.0',
+        port: 5173,
+        cors: true,
+        hmr: {
+            host: '192.168.0.187', // ← YOUR PC IP
+        },
+    },
 });

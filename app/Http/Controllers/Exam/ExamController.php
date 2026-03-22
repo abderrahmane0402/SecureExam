@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Exam;
 
+use App\Events\ExamAttemptPaused;
+use App\Events\TeacherMessageBroadcast;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Exam\AssignStudentsRequest;
 use App\Http\Requests\Exam\StoreExamRequest;
@@ -11,6 +13,7 @@ use App\Models\ExamAttempt;
 use App\Models\User;
 use App\Models\ViolationLog;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -56,7 +59,7 @@ class ExamController extends Controller
         ]);
 
         return redirect()
-            ->route('exams.edit', $exam)
+            ->route('exams.show', $exam)
             ->with('success', 'Exam created successfully. Now add questions.');
     }
 
@@ -102,7 +105,9 @@ class ExamController extends Controller
     {
         $exam->update($request->validated());
 
-        return back()->with('success', 'Exam updated successfully.');
+        return redirect()
+            ->route('exams.show', $exam)
+            ->with('success', 'Exam updated successfully.');
     }
 
     /**
@@ -124,18 +129,43 @@ class ExamController extends Controller
      */
     public function assignStudents(AssignStudentsRequest $request, Exam $exam): RedirectResponse
     {
-        $studentIds = $request->validated('student_ids');
+        $validated = $request->validated();
+        $studentIds = $validated['student_ids'] ?? [];
 
-        // Sync students (this will add new and remove unselected)
-        $syncData = [];
-        foreach ($studentIds as $studentId) {
-            $syncData[$studentId] = ['assigned_at' => now()];
+        \Illuminate\Support\Facades\Log::info('Assigning students:', [
+            'exam_id' => $exam->id,
+            'request_student_ids' => $studentIds,
+            'request_emails' => $validated['emails'] ?? null,
+        ]);
+
+        // Handle bulk emails if provided
+        if (! empty($validated['emails'])) {
+            $emails = preg_split('/[\s,]+/', $validated['emails'], -1, PREG_SPLIT_NO_EMPTY);
+            $matchedIds = User::query()
+                ->where('role', 'student')
+                ->whereIn('email', $emails)
+                ->pluck('id')
+                ->toArray();
+
+            $studentIds = array_unique(array_merge($studentIds, $matchedIds));
         }
 
-        $exam->assignedStudents()->sync($syncData);
+        \Illuminate\Support\Facades\Log::info('Final student IDs to sync:', $studentIds);
 
-        return back()->with('success', 'Students assigned successfully.');
+        // Sync students (this will add new and remove unselected if we use sync)
+        $syncData = [];
+        foreach ($studentIds as $studentId) {
+            $syncData[(int)$studentId] = ['assigned_at' => now()];
+        }
+
+        \Illuminate\Support\Facades\Log::info('Sync data structure:', $syncData);
+
+        $results = $exam->assignedStudents()->sync($syncData);
+
+        \Illuminate\Support\Facades\Log::info('Sync raw results:', $results);
+        return back()->with('success', count($studentIds) . ' students assigned successfully.');
     }
+
 
     /**
      * Show form to assign students.
@@ -149,11 +179,14 @@ class ExamController extends Controller
         $students = User::query()
             ->where('role', 'student')
             ->orderBy('name')
-            ->get(['id', 'name', 'email']);
+            ->get(['id', 'name', 'email', 'group']);
+
+        $groups = $students->pluck('group')->unique()->filter()->values();
 
         return Inertia::render('exams/instructor/assign-students', [
             'exam' => $exam,
             'students' => $students,
+            'groups' => $groups,
         ]);
     }
 
@@ -202,7 +235,7 @@ class ExamController extends Controller
         $notStartedCount = $totalAssigned - $attemptedStudentIds->count();
 
         $recentViolations = ViolationLog::query()
-            ->whereHas('attempt', fn($q) => $q->where('exam_id', $exam->id))
+            ->whereHas('attempt', fn ($q) => $q->where('exam_id', $exam->id))
             ->with('attempt.student')
             ->latest('occurred_at')
             ->limit(20)
@@ -212,7 +245,7 @@ class ExamController extends Controller
 
         return Inertia::render('exams/instructor/monitor', [
             'exam' => $exam,
-            'activeStudents' => $activeAttempts->map(fn($a) => [
+            'activeStudents' => $activeAttempts->map(fn ($a) => [
                 'user' => [
                     'id' => $a->student->id,
                     'name' => $a->student->name,
@@ -231,7 +264,7 @@ class ExamController extends Controller
             'completedCount' => $completedCount,
             'notStartedCount' => $notStartedCount,
             'totalAssigned' => $totalAssigned,
-            'recentViolations' => $recentViolations->map(fn($v) => [
+            'recentViolations' => $recentViolations->map(fn ($v) => [
                 'id' => $v->id,
                 'violation_type' => $v->violation_type,
                 'details' => $v->details,
@@ -345,5 +378,65 @@ class ExamController extends Controller
         $attempt->update(['violation_count' => 0]);
 
         return back()->with('success', 'Violations cleared for this attempt.');
+    }
+
+    /**
+     * Broadcast a message to all students taking the exam.
+     */
+    public function broadcastMessage(Request $request, Exam $exam): RedirectResponse
+    {
+        Gate::authorize('update', $exam);
+
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'max:500'],
+        ]);
+
+        broadcast(new TeacherMessageBroadcast(
+            $exam->id,
+            $validated['message'],
+            auth()->user()->name
+        ))->toOthers();
+
+        return back()->with('success', 'Message broadcasted to all students.');
+    }
+
+    /**
+     * Pause or resume a student's attempt.
+     */
+    public function togglePause(Exam $exam, ExamAttempt $attempt): RedirectResponse
+    {
+        Gate::authorize('update', $exam);
+
+        if ($attempt->exam_id !== $exam->id) {
+            abort(404);
+        }
+
+        $attempt->update(['is_paused' => ! $attempt->is_paused]);
+
+        $status = $attempt->is_paused ? 'paused' : 'resumed';
+
+        broadcast(new ExamAttemptPaused($attempt, $attempt->is_paused))->toOthers();
+
+        return back()->with('success', "Attempt $status successfully.");
+    }
+
+    /**
+     * Extend time for a student's attempt.
+     */
+    public function extendTime(Request $request, Exam $exam, ExamAttempt $attempt): RedirectResponse
+    {
+        Gate::authorize('update', $exam);
+
+        if ($attempt->exam_id !== $exam->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'minutes' => ['required', 'integer', 'min:1', 'max:60'],
+        ]);
+
+        $attempt->increment('extra_time_minutes', $validated['minutes']);
+
+        return back()->with('success', "Extended time by {$validated['minutes']} minutes.");
     }
 }

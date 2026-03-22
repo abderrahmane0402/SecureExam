@@ -1,7 +1,8 @@
 import { Head, useForm, router } from '@inertiajs/react';
+import { PlusIcon, TrashIcon, GripVerticalIcon, UploadIcon } from 'lucide-react';
 import { useState } from 'react';
-import { PlusIcon, TrashIcon, GripVerticalIcon, ImageIcon } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -10,11 +11,17 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Exam, Question, QuestionType } from '@/types';
 
 interface Props {
@@ -40,6 +47,7 @@ export default function EditExam({ exam }: Props) {
 
     const examForm = useForm({
         title: exam.title,
+        type: exam.type as 'auto' | 'hybrid',
         description: exam.description || '',
         duration_minutes: exam.duration_minutes,
         start_time: exam.start_time.slice(0, 16),
@@ -51,6 +59,13 @@ export default function EditExam({ exam }: Props) {
         passing_score: exam.passing_score,
         is_published: exam.is_published,
     });
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Dashboard', href: '/dashboard' },
+        { title: 'Exams', href: '/exams' },
+        { title: exam.title, href: `/exams/${exam.id}` },
+        { title: 'Edit', href: `/exams/${exam.id}/edit` },
+    ];
 
     const questionForm = useForm<{
         type: QuestionType;
@@ -140,15 +155,13 @@ export default function EditExam({ exam }: Props) {
         'multiple_choice_multiple',
     ].includes(questionForm.data.type);
     const isTrueFalse = questionForm.data.type === 'true_false';
-    const isTextBased = ['short_text', 'essay'].includes(
-        questionForm.data.type,
-    );
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Exams', href: '/exams' },
-        { title: exam.title, href: `/exams/${exam.id}/edit` },
-    ];
+    const availableQuestionTypes = questionTypes.filter((type) => {
+        if (examForm.data.type === 'auto') {
+            return !['short_text', 'essay'].includes(type.value);
+        }
+        return true;
+    });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -207,6 +220,28 @@ export default function EditExam({ exam }: Props) {
                                     <InputError
                                         message={examForm.errors.title}
                                     />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="type">Correction Type</Label>
+                                    <Select
+                                        value={examForm.data.type}
+                                        onValueChange={(value: 'auto' | 'hybrid') =>
+                                            examForm.setData('type', value)
+                                        }
+                                    >
+                                        <SelectTrigger id="type">
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="auto">
+                                                Auto-Correction (MCQ only)
+                                            </SelectItem>
+                                            <SelectItem value="hybrid">
+                                                Hybrid (Includes Free Text)
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={examForm.errors.type} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="duration">
@@ -286,7 +321,7 @@ export default function EditExam({ exam }: Props) {
                                         type="number"
                                         min="0"
                                         max="100"
-                                        value={examForm.data.passing_score}
+                                        value={examForm.data.passing_score ?? ''}
                                         onChange={(e) =>
                                             examForm.setData(
                                                 'passing_score',
@@ -379,8 +414,52 @@ export default function EditExam({ exam }: Props) {
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        {/* Question Form */}
+                    <CardContent className="space-y-6">
+                        {/* Bulk Import */}
+                        {!showQuestionForm && (
+                            <div className="rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 p-6 bg-slate-50/30">
+                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                    <div className="flex size-12 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border shadow-sm shrink-0">
+                                        <UploadIcon className="size-6 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 text-center md:text-left">
+                                        <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight text-xs italic">Bulk Import (Aiken Format)</h3>
+                                        <p className="text-[10px] font-bold text-slate-500 mt-0.5 uppercase tracking-widest leading-relaxed">Quickly add multiple choice questions from a text file. Each question should have options A, B, C, D and an ANSWER line.</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button variant="ghost" size="sm" className="font-black text-[9px] uppercase tracking-widest h-9" onClick={() => {
+                                            const aikenTemplate = "What is the capital of France?\nA) Paris\nB) Lyon\nC) Marseille\nD) Berlin\nANSWER: A";
+                                            const blob = new Blob([aikenTemplate], { type: 'text/plain' });
+                                            const url = window.URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = 'aiken_template.txt';
+                                            a.click();
+                                        }}>
+                                            Template
+                                        </Button>
+                                        <label className="cursor-pointer inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all shadow-md shadow-blue-200 h-9">
+                                            Select .txt
+                                            <input 
+                                                type="file" 
+                                                className="hidden" 
+                                                accept=".txt"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        const formData = new FormData();
+                                                        formData.append('file', file);
+                                                        router.post(`/exams/${exam.id}/questions/import-aiken`, formData as any);
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Add Question Form */}
                         {showQuestionForm && (
                             <Card className="mb-6 border-primary">
                                 <CardHeader>
@@ -456,7 +535,7 @@ export default function EditExam({ exam }: Props) {
                                                     }}
                                                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                                 >
-                                                    {questionTypes.map(
+                                                    {availableQuestionTypes.map(
                                                         (type) => (
                                                             <option
                                                                 key={type.value}

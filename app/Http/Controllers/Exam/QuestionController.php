@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Exam\StoreQuestionRequest;
 use App\Models\Exam;
 use App\Models\Question;
+use App\Services\AikenParserService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -167,5 +169,47 @@ class QuestionController extends Controller
         });
 
         return back()->with('success', 'Questions reordered successfully.');
+    }
+
+    /**
+     * Import questions from an Aiken formatted file.
+     */
+    public function importAiken(Request $request, Exam $exam, AikenParserService $parser): RedirectResponse
+    {
+        Gate::authorize('update', $exam);
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:txt'],
+        ]);
+
+        $text = file_get_contents($request->file('file')->getRealPath());
+        $questions = $parser->parse($text);
+
+        if (empty($questions)) {
+            return back()->with('error', 'No valid Aiken formatted questions found.');
+        }
+
+        DB::transaction(function () use ($questions, $exam): void {
+            $nextOrder = $exam->questions()->max('order') + 1;
+
+            foreach ($questions as $qData) {
+                $question = $exam->questions()->create([
+                    'type' => 'multiple_choice_single',
+                    'content' => $qData['content'],
+                    'points' => 1,
+                    'order' => $nextOrder++,
+                ]);
+
+                foreach ($qData['options'] as $letter => $content) {
+                    $question->options()->create([
+                        'content' => $content,
+                        'is_correct' => $letter === $qData['correct_letter'],
+                        'order' => ord($letter) - ord('A'),
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', count($questions).' questions imported successfully.');
     }
 }
