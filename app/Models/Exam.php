@@ -104,4 +104,21 @@ class Exam extends Model
     {
         return $this->questions->sum('points');
     }
+
+    /**
+     * Ensure dates are formatted correctly for the frontend input (local time).
+     */
+    protected function startTime(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn ($value) => \Illuminate\Support\Carbon::parse($value)->format('Y-m-d\TH:i'),
+        );
+    }
+
+    protected function endTime(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn ($value) => \Illuminate\Support\Carbon::parse($value)->format('Y-m-d\TH:i'),
+        );
+    }
 }

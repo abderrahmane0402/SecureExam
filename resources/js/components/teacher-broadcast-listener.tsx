@@ -17,7 +17,7 @@ export function TeacherBroadcastListener() {
 }
 
 function ExamChannelListener({ examId }: { examId: number }) {
-    useEcho(`exam-room.${examId}`, 'TeacherMessageBroadcast', (e: any) => {
+    useEcho(`exam-room.${examId}`, '.TeacherMessageBroadcast', (e: any) => {
         // Prevent duplicate toasts if we're already on the 'take' page 
         // which has its own listener (though sonner handles duplicates well)
         if (window.location.pathname.includes(`/exam/take/`)) {
@@ -28,7 +28,6 @@ function ExamChannelListener({ examId }: { examId: number }) {
             icon: <MailIcon className="size-4 text-blue-600" />,
             description: `From Instructor: ${e.teacher_name}`,
             duration: Infinity,
-            important: true,
         });
     });
 

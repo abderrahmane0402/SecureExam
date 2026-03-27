@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ClockIcon, FileTextIcon, CalendarIcon, PlayIcon } from 'lucide-react';
+import { ClockIcon, FileTextIcon, CalendarIcon, PlayIcon, TrophyIcon, EyeIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 import type { ExamForStudent } from '@/types/exam';
 
@@ -63,11 +64,19 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('student.exams.title')} />
             <div className="flex flex-col gap-6 p-6">
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <h1 className="text-2xl font-bold">{t('student.exams.title')}</h1>
-                    <p className="mt-1 opacity-90">
-                        {t('student.exams.subtitle')}
-                    </p>
+                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white shadow-lg flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-black uppercase tracking-tight">{t('student.exams.title')}</h1>
+                        <p className="mt-1 opacity-90 font-medium">
+                            {t('student.exams.subtitle')}
+                        </p>
+                    </div>
+                    <Button asChild variant="secondary" className="font-black bg-white/20 hover:bg-white/30 border-white/20 text-white backdrop-blur-md">
+                        <Link href="/student/results">
+                            <TrophyIcon className="mr-2 size-4" />
+                            {t('student.results.title')}
+                        </Link>
+                    </Button>
                 </div>
 
                 {/* Available Exams */}
@@ -215,54 +224,68 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                 </CardTitle>
                                                 <Badge
                                                     variant={
-                                                        attempt?.status === 'graded'
+                                                        attempt?.is_published
                                                             ? 'default'
-                                                            : attempt?.status === 'auto_submitted'
-                                                              ? 'destructive'
-                                                              : 'secondary'
+                                                            : 'secondary'
                                                     }
-                                                    className="shrink-0"
+                                                    className={cn(
+                                                        "shrink-0 uppercase text-[10px] font-black tracking-wider px-2 h-5",
+                                                        attempt?.is_published ? "bg-emerald-500 hover:bg-emerald-600" : ""
+                                                    )}
                                                 >
-                                                    {attempt?.status === 'graded'
+                                                    {attempt?.is_published
                                                         ? t('exam.status.graded')
-                                                        : attempt?.status === 'auto_submitted'
-                                                          ? t('exam.status.autoSubmitted')
-                                                          : t('exam.status.submitted')}
+                                                        : (attempt?.status === 'graded' ? t('student.exams.pendingRelease') : t('student.exams.awaitingGrade'))}
                                                 </Badge>
                                             </div>
                                         </CardHeader>
                                         <CardContent className="flex flex-1 flex-col">
                                             <div className="flex flex-1 items-center justify-between border-t pt-4">
                                                 <div>
-                                                    {attempt?.percentage !=
-                                                    null ? (
+                                                    {attempt?.is_published ? (
                                                         <>
-                                                            <p className="text-3xl font-bold">
-                                                                {Number(
-                                                                    attempt.percentage,
-                                                                ).toFixed(0)}
-                                                                %
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                Score:{' '}
-                                                                {attempt?.score}
+                                                            <div className="flex items-baseline gap-1">
+                                                                <p className="text-3xl font-black tracking-tight text-emerald-600">
+                                                                    {Number(
+                                                                        attempt.percentage,
+                                                                    ).toFixed(0)}
+                                                                </p>
+                                                                <span className="text-sm font-black text-emerald-600/50">%</span>
+                                                            </div>
+                                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                                                Final Score
                                                             </p>
                                                         </>
                                                     ) : (
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {t('student.exams.awaitingGrade')}
-                                                        </p>
+                                                        <div className="space-y-1">
+                                                            <p className="text-sm font-bold text-muted-foreground italic">
+                                                                {attempt?.status === 'graded' ? t('student.exams.pendingRelease') : t('student.exams.awaitingGrade')}
+                                                            </p>
+                                                            <div className="h-1.5 w-24 bg-muted rounded-full overflow-hidden">
+                                                                <div className="h-full bg-blue-500/30 animate-pulse w-1/2" />
+                                                            </div>
+                                                        </div>
                                                     )}
                                                 </div>
                                                 <Button
-                                                    variant="outline"
-                                                    asChild
+                                                    variant={attempt?.is_published ? "default" : "outline"}
+                                                    disabled={!attempt?.is_published}
+                                                    asChild={attempt?.is_published}
+                                                    className={cn(
+                                                        "font-black uppercase tracking-widest text-[10px]",
+                                                        attempt?.is_published ? "bg-slate-900 hover:bg-slate-800" : "opacity-50"
+                                                    )}
                                                 >
-                                                    <Link
-                                                        href={`/student/exams/${exam.id}/results`}
-                                                    >
-                                                        {t('student.exams.viewResults')}
-                                                    </Link>
+                                                    {attempt?.is_published ? (
+                                                        <Link
+                                                            href={`/student/exams/${exam.id}/attempts/${attempt.id}`}
+                                                        >
+                                                            <EyeIcon className="mr-2 size-3.5" />
+                                                            {t('student.exams.viewResults')}
+                                                        </Link>
+                                                    ) : (
+                                                        <span>{t('student.exams.viewResults')}</span>
+                                                    )}
                                                 </Button>
                                             </div>
                                         </CardContent>

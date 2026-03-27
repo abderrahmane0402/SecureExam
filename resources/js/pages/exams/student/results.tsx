@@ -92,10 +92,31 @@ export default function StudentExamResults({ exam, attempt }: Props) {
 
                 {/* Summary */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Attempt Summary</CardTitle>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Attempt Summary</CardTitle>
+                        {attempt.penalty_points && (
+                            <Badge variant="destructive" className="animate-pulse bg-rose-600 font-bold">
+                                Penalty Applied: -{attempt.penalty_points} PTS
+                            </Badge>
+                        )}
                     </CardHeader>
-                    <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <CardContent>
+                        {attempt.penalty_points && (
+                            <div className="mb-6 rounded-lg border border-red-100 bg-red-50 p-4 dark:bg-red-950/20 dark:border-red-900/30">
+                                <div className="flex items-center gap-2 text-red-800 dark:text-red-400">
+                                    <AlertTriangleIcon className="size-4" />
+                                    <p className="text-sm font-bold uppercase tracking-wide">Disciplinary Deduction</p>
+                                </div>
+                                <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+                                    A penalty of <strong>{attempt.penalty_points} points</strong> was applied to this attempt.
+                                </p>
+                                <div className="mt-3 rounded border border-red-200 bg-white/50 p-3 italic text-red-900 dark:bg-black/20 dark:text-red-200 dark:border-red-800">
+                                    "{attempt.penalty_reason}"
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div className="rounded-lg bg-muted/50 p-3 text-center">
                             <p className="text-2xl font-bold">
                                 {attempt.points_earned != null
@@ -147,6 +168,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                             <p className="text-sm text-muted-foreground">
                                 Violations
                             </p>
+                        </div>
                         </div>
                     </CardContent>
                 </Card>

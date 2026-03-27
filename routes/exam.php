@@ -81,8 +81,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('grading.answer');
         Route::post('grading/attempt/{attempt}/finalize', [GradingController::class, 'finalize'])
             ->name('grading.finalize');
+        Route::post('grading/attempt/{attempt}/penalty', [GradingController::class, 'applyPenalty'])
+            ->name('grading.penalty');
+        Route::post('grading/attempt/{attempt}/publish', [GradingController::class, 'publishGrade'])
+            ->name('grading.publish');
         Route::post('grading/{examId}/bulk-auto-grade', [GradingController::class, 'bulkAutoGrade'])
             ->name('grading.bulk-auto-grade');
+        Route::post('grading/{examId}/bulk-publish', [GradingController::class, 'bulkPublish'])
+            ->name('grading.bulk-publish');
+        Route::post('exams/{exam}/toggle-show-results', [ExamController::class, 'toggleShowResults'])
+            ->name('exams.toggle-show-results');
     });
 
     // Student routes
@@ -92,6 +100,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('exams.index');
         Route::get('exams/{exam}', [StudentExamController::class, 'show'])
             ->name('exams.show');
+        Route::get('results', [StudentExamController::class, 'myResults'])
+            ->name('results');
+        Route::get('exams/{exam}/attempts/{attempt}', [StudentExamController::class, 'attemptGrade'])
+            ->name('exams.attempts.show');
         Route::get('exams/{exam}/results', [StudentExamController::class, 'results'])
             ->name('exams.results');
 

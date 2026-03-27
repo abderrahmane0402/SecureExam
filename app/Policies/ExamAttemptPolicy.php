@@ -93,6 +93,20 @@ class ExamAttemptPolicy
     {
         return $user->isInstructor()
             && $examAttempt->exam->instructor_id === $user->id
-            && in_array($examAttempt->status, [ExamAttempt::STATUS_SUBMITTED, ExamAttempt::STATUS_AUTO_SUBMITTED]);
+            && in_array($examAttempt->status, [
+                ExamAttempt::STATUS_SUBMITTED,
+                ExamAttempt::STATUS_AUTO_SUBMITTED,
+                ExamAttempt::STATUS_GRADED,
+            ]);
+    }
+
+    /**
+     * Determine whether the user can publish the attempt's grade.
+     */
+    public function publish(User $user, ExamAttempt $examAttempt): bool
+    {
+        return $user->isInstructor()
+            && $examAttempt->exam->instructor_id === $user->id
+            && $examAttempt->status === ExamAttempt::STATUS_GRADED;
     }
 }

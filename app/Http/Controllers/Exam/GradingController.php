@@ -32,7 +32,7 @@ class GradingController extends Controller
         $attempts = ExamAttempt::query()
             ->where('exam_id', $examId)
             ->whereIn('status', [ExamAttempt::STATUS_SUBMITTED, ExamAttempt::STATUS_AUTO_SUBMITTED, ExamAttempt::STATUS_GRADED])
-            ->with(['student:id,name,email'])
+            ->with(['student:id,name,email', 'violations'])
             ->withCount(['answers', 'violations'])
             ->orderByDesc('submitted_at')
             ->get();
@@ -40,6 +40,7 @@ class GradingController extends Controller
         // Calculate stats
         $total = $attempts->count();
         $graded = $attempts->where('status', ExamAttempt::STATUS_GRADED)->count();
+        $published = $attempts->where('is_published', true)->count();
         $pendingGrading = $total - $graded;
         $completedScores = $attempts->where('percentage', '!=', null)->pluck('percentage');
         $averageScore = $completedScores->isNotEmpty() ? round($completedScores->avg(), 1) : null;
@@ -50,13 +51,15 @@ class GradingController extends Controller
                 'title' => $exam->title,
                 'questions_count' => $exam->questions_count,
                 'total_points' => $exam->total_points,
+                'show_results' => $exam->show_results,
             ],
             'attempts' => $attempts,
             'stats' => [
                 'total' => $total,
-                'completed' => $total,
+                'completed' => $graded,
                 'pending_grading' => $pendingGrading,
                 'graded' => $graded,
+                'published' => $published,
                 'average_score' => $averageScore,
             ],
         ]);
@@ -109,7 +112,7 @@ class GradingController extends Controller
         // Get navigation IDs (previous/next attempts to grade)
         $attemptIds = ExamAttempt::query()
             ->where('exam_id', $exam->id)
-            ->whereIn('status', [ExamAttempt::STATUS_SUBMITTED, ExamAttempt::STATUS_AUTO_SUBMITTED])
+            ->whereIn('status', [ExamAttempt::STATUS_SUBMITTED, ExamAttempt::STATUS_AUTO_SUBMITTED, ExamAttempt::STATUS_GRADED])
             ->orderByDesc('submitted_at')
             ->pluck('id')
             ->toArray();
@@ -133,6 +136,8 @@ class GradingController extends Controller
                 'score' => $attempt->score,
                 'percentage' => $attempt->percentage,
                 'violation_count' => $attempt->violation_count,
+                'penalty_points' => $attempt->penalty_points,
+                'penalty_reason' => $attempt->penalty_reason,
                 'student' => $attempt->student,
                 'violation_logs' => $attempt->violations,
             ],
@@ -168,7 +173,13 @@ class GradingController extends Controller
             'instructor_feedback' => $validated['feedback'],
         ]);
 
-        return response()->json(['success' => true]);
+        // Return running total
+        $runningTotal = $attempt->answers()->sum('points_earned') ?? 0;
+
+        return response()->json([
+            'success' => true,
+            'running_total' => $runningTotal,
+        ]);
     }
 
     /**
@@ -178,32 +189,66 @@ class GradingController extends Controller
     {
         Gate::authorize('grade', $attempt);
 
-        // Recalculate totals
-        $totalEarned = $attempt->answers()->sum('points_earned') ?? 0;
-        $totalPossible = $attempt->exam->total_points;
-        $percentage = $totalPossible > 0 ? ($totalEarned / $totalPossible) * 100 : 0;
+        $this->gradingService->finalizeAttempt($attempt);
 
-        $attempt->update([
-            'status' => ExamAttempt::STATUS_GRADED,
-            'score' => $totalEarned,
-            'total_points' => $totalPossible,
-            'percentage' => round($percentage, 2),
-        ]);
-
-        return redirect()
-            ->route('grading.index', $attempt->exam_id)
-            ->with('success', 'Attempt graded successfully.');
+        return back()->with('success', 'Attempt graded successfully.');
     }
 
     /**
-     * Bulk auto-grade all pending attempts.
+     * Apply penalty to an attempt.
+     */
+    public function applyPenalty(ExamAttempt $attempt): RedirectResponse
+    {
+        Gate::authorize('grade', $attempt);
+
+        $validated = request()->validate([
+            'mode' => ['required', 'string', 'in:none,penalty,zero'],
+            'penalty_points' => ['nullable', 'numeric', 'min:0', 'required_if:mode,penalty'],
+            'reason' => ['nullable', 'string', 'max:1000', 'required_unless:mode,none'],
+        ]);
+
+        if ($validated['mode'] === 'none') {
+            $attempt->update([
+                'penalty_points' => null,
+                'penalty_reason' => null,
+            ]);
+        } elseif ($validated['mode'] === 'zero') {
+            $attempt->update([
+                'penalty_points' => $attempt->exam->total_points, // Full score deduction
+                'penalty_reason' => $validated['reason'],
+            ]);
+        } else {
+            $attempt->update([
+                'penalty_points' => $validated['penalty_points'],
+                'penalty_reason' => $validated['reason'],
+            ]);
+        }
+
+        // Refinalize the attempt to calculate new score
+        $this->gradingService->finalizeAttempt($attempt);
+
+        return back()->with('success', 'Penalty applied successfully.');
+    }
+
+    /**
+     * Bulk auto-grade pending attempts.
      */
     public function bulkAutoGrade(int $examId): RedirectResponse
     {
-        $attempts = ExamAttempt::query()
+        $validated = request()->validate([
+            'attempt_ids' => ['nullable', 'array'],
+            'attempt_ids.*' => ['integer', 'exists:exam_attempts,id'],
+        ]);
+
+        $query = ExamAttempt::query()
             ->where('exam_id', $examId)
-            ->whereIn('status', [ExamAttempt::STATUS_SUBMITTED, ExamAttempt::STATUS_AUTO_SUBMITTED])
-            ->get();
+            ->whereIn('status', [ExamAttempt::STATUS_SUBMITTED, ExamAttempt::STATUS_AUTO_SUBMITTED]);
+
+        if (! empty($validated['attempt_ids'])) {
+            $query->whereIn('id', $validated['attempt_ids']);
+        }
+
+        $attempts = $query->get();
 
         if ($attempts->isEmpty()) {
             return back()->with('info', 'No attempts to grade.');
@@ -214,9 +259,67 @@ class GradingController extends Controller
 
         foreach ($attempts as $attempt) {
             $this->gradingService->gradeAttempt($attempt);
+            $this->gradingService->finalizeAttempt($attempt);
         }
 
-        return back()->with('success', 'Auto-grading completed for '.$attempts->count().' attempts.');
+        return back()->with('success', 'Auto-grading completed and finalized for '.$attempts->count().' attempts.');
+    }
+
+    /**
+     * Toggle publication status of an attempt.
+     */
+    public function publishGrade(ExamAttempt $attempt): RedirectResponse
+    {
+        Gate::authorize('grade', $attempt);
+
+        if ($attempt->status !== ExamAttempt::STATUS_GRADED) {
+            return back()->with('error', 'Only graded attempts can be published.');
+        }
+
+        $attempt->update([
+            'is_published' => ! $attempt->is_published,
+            'published_at' => ! $attempt->is_published ? now() : null,
+        ]);
+
+        $message = $attempt->is_published ? 'Grade published successfully.' : 'Grade unpublished successfully.';
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Bulk publish graded attempts.
+     */
+    public function bulkPublish(int $examId): RedirectResponse
+    {
+        $validated = request()->validate([
+            'attempt_ids' => ['nullable', 'array'],
+            'attempt_ids.*' => ['integer', 'exists:exam_attempts,id'],
+        ]);
+
+        $query = ExamAttempt::query()
+            ->where('exam_id', $examId)
+            ->where('status', ExamAttempt::STATUS_GRADED);
+
+        if (! empty($validated['attempt_ids'])) {
+            $query->whereIn('id', $validated['attempt_ids']);
+        }
+
+        $attempts = $query->get();
+
+        if ($attempts->isEmpty()) {
+            return back()->with('info', 'No graded attempts to publish.');
+        }
+
+        Gate::authorize('grade', $attempts->first());
+
+        foreach ($attempts as $attempt) {
+            $attempt->update([
+                'is_published' => true,
+                'published_at' => now(),
+            ]);
+        }
+
+        return back()->with('success', 'Published grades for '.$attempts->count().' attempts.');
     }
 
     /**
@@ -235,15 +338,7 @@ class GradingController extends Controller
 
         $filename = 'results_'.str_replace(' ', '_', strtolower($exam->title)).'_'.date('Y-m-d').'.csv';
 
-        $headers = [
-            'Content-type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=$filename",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
-        ];
-
-        $callback = function () use ($attempts) {
+        return response()->streamDownload(function () use ($attempts) {
             $file = fopen('php://output', 'w');
             fputcsv($file, ['Student Name', 'Email', 'Status', 'Score', 'Total Points', 'Percentage', 'Violations', 'Submitted At']);
 
@@ -261,8 +356,8 @@ class GradingController extends Controller
             }
 
             fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

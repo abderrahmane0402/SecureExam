@@ -29,6 +29,8 @@ class ViolationLog extends Model
 
     public const TYPE_VIEW_SOURCE = 'view_source';
 
+    public const TYPE_DEVICE_DISCONNECTED = 'device_disconnected';
+
     public const TYPE_RELOAD_DELAY = 'reload_delay';
 
     public const TYPES = [
@@ -42,6 +44,7 @@ class ViolationLog extends Model
         self::TYPE_DEVTOOLS,
         self::TYPE_VIEW_SOURCE,
         self::TYPE_RELOAD_DELAY,
+        self::TYPE_DEVICE_DISCONNECTED,
     ];
 
     public const SEVERITY_LOW = 'low';

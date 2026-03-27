@@ -78,7 +78,7 @@ class StudentExamController extends Controller
         $attempts = $exam->attempts()
             ->where('student_id', $user->id)
             ->orderByDesc('created_at')
-            ->get(['id', 'attempt_number', 'status', 'score', 'percentage', 'started_at', 'submitted_at', 'violation_count', 'auto_submitted']);
+            ->get(['id', 'attempt_number', 'status', 'score', 'percentage', 'started_at', 'submitted_at', 'violation_count', 'auto_submitted', 'is_published', 'published_at']);
 
         $completedAttempts = $attempts->whereIn('status', ['submitted', 'graded', 'auto_submitted'])->count();
 
@@ -138,13 +138,13 @@ class StudentExamController extends Controller
                 'total_points' => $exam->total_points,
                 'passing_score' => $exam->passing_score,
                 'show_results' => $exam->show_results,
-                'questions' => $exam->questions->map(fn($q) => [
+                'questions' => $exam->questions->map(fn ($q) => [
                     'id' => $q->id,
                     'type' => $q->type,
                     'content' => $q->content,
                     'points' => $q->points,
                     'correct_answer' => $q->correct_answer,
-                    'options' => $q->options->map(fn($o) => [
+                    'options' => $q->options->map(fn ($o) => [
                         'id' => $o->id,
                         'content' => $o->content,
                         'is_correct' => $o->is_correct,
@@ -153,5 +153,94 @@ class StudentExamController extends Controller
             ],
             'attempt' => $attempt,
         ]);
+    }
+
+    /**
+     * Display all published graded results for the student.
+     */
+    public function myResults(): Response
+    {
+        $user = auth()->user();
+
+        $attempts = \App\Models\ExamAttempt::query()
+            ->with(['exam.instructor'])
+            ->where('student_id', $user->id)
+            ->where('is_published', true)
+            ->where('status', \App\Models\ExamAttempt::STATUS_GRADED)
+            ->orderByDesc('published_at')
+            ->get();
+
+        return Inertia::render('exams/student/my-results', [
+            'attempts' => $attempts,
+        ]);
+    }
+
+    /**
+     * Show grade details for a specific attempt.
+     */
+    public function attemptGrade(Exam $exam, \App\Models\ExamAttempt $attempt): Response
+    {
+        $user = auth()->user();
+
+        // Security check
+        if ($attempt->student_id !== $user->id || $attempt->exam_id !== $exam->id) {
+            abort(403);
+        }
+
+        if ($attempt->status !== \App\Models\ExamAttempt::STATUS_GRADED || ! $attempt->is_published) {
+            abort(403, 'This grade is not yet released.');
+        }
+
+        $attempt->load(['answers']);
+
+        $data = [
+            'exam' => [
+                'id' => $exam->id,
+                'title' => $exam->title,
+                'total_points' => $exam->total_points,
+                'passing_score' => $exam->passing_score,
+                'show_results' => $exam->show_results,
+            ],
+            'attempt' => [
+                'id' => $attempt->id,
+                'score' => $attempt->score,
+                'percentage' => $attempt->percentage,
+                'violation_count' => $attempt->violation_count,
+                'penalty_points' => $attempt->penalty_points,
+                'penalty_reason' => $attempt->penalty_reason,
+                'submitted_at' => $attempt->submitted_at,
+                'published_at' => $attempt->published_at,
+            ],
+        ];
+
+        // Only include question breakdown if show_results is enabled
+        if ($exam->show_results) {
+            $exam->load(['questions.options']);
+            $data['exam']['questions'] = $exam->questions->map(function ($q) use ($attempt) {
+                $answer = $attempt->answers->firstWhere('question_id', $q->id);
+
+                return [
+                    'id' => $q->id,
+                    'type' => $q->type,
+                    'content' => $q->content,
+                    'points' => $q->points,
+                    'correct_answer' => $q->correct_answer,
+                    'options' => $q->options->map(fn ($o) => [
+                        'id' => $o->id,
+                        'content' => $o->content,
+                        'is_correct' => $o->is_correct,
+                    ]),
+                    'answer' => $answer ? [
+                        'text_answer' => $answer->text_answer,
+                        'selected_options' => $answer->selected_options,
+                        'points_earned' => $answer->points_earned,
+                        'is_correct' => $answer->is_correct,
+                        'instructor_feedback' => $answer->instructor_feedback,
+                    ] : null,
+                ];
+            });
+        }
+
+        return Inertia::render('exams/student/grade', $data);
     }
 }

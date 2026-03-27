@@ -94,6 +94,7 @@ export interface ExamForStudent {
         percentage: number | null;
         violation_count: number;
         auto_submitted: boolean;
+        is_published: boolean;
     } | null;
 }
 
@@ -141,6 +142,8 @@ export interface ExamAttempt {
     started_at: string;
     submitted_at: string | null;
     graded_at: string | null;
+    published_at?: string | null;
+    is_published: boolean;
     status: AttemptStatus;
     is_paused: boolean;
     extra_time_minutes: number;
@@ -149,6 +152,8 @@ export interface ExamAttempt {
     total_points: number | null;
     percentage: number | null;
     violation_count: number;
+    penalty_points?: number | null;
+    penalty_reason?: string | null;
     auto_submitted: boolean;
     ip_address: string | null;
     user_agent: string | null;

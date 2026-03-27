@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 // STRICT thresholds (in seconds) - matched with backend
 const THRESHOLDS = {
@@ -21,7 +22,9 @@ interface UseExamSecurityOptions {
     onViolation?: (type: string, count: number, severity: Severity) => void;
     onAutoSubmit?: () => void;
     onLockChange?: (locked: boolean, reason: string) => void;
+    onPauseStatusChange?: (paused: boolean) => void;
     enabled?: boolean;
+    isPaused?: boolean;
     initialSessionToken?: string;
 }
 
@@ -48,15 +51,17 @@ export function useExamSecurity({
     onViolation,
     onAutoSubmit,
     onLockChange,
+    onPauseStatusChange,
     enabled = true,
+    isPaused = false,
     initialSessionToken,
 }: UseExamSecurityOptions) {
     const [isLocked, setIsLocked] = useState(false);
+    const [isKicked, setIsKicked] = useState(false);
     const [lockReason, setLockReason] = useState('');
     const [lastAbsenceDuration, setLastAbsenceDuration] = useState<
         number | null
     >(null);
-    const [warningMessage, setWarningMessage] = useState<string | null>(null);
     const [reloadCountdown, setReloadCountdown] = useState<number | null>(null);
     
     // UI State
@@ -72,33 +77,22 @@ export function useExamSecurity({
     const focusLossCountRef = useRef(0); 
     const kickTimerRef = useRef<NodeJS.Timeout | null>(null); 
     const reloadTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
     const reloadViolationLoggedRef = useRef(false);
     const isResumingRef = useRef(false);
     const hasEnteredFullscreenRef = useRef(false);
-
-    // Initial check for resume state
-    useEffect(() => {
-        // If enabled and not in fullscreen on mount, this is a resume
-        if (enabled && !document.fullscreenElement) {
-            isResumingRef.current = true;
-            // Delay setState to avoid cascading render warning
-            setTimeout(() => {
-                setHasEnteredFullscreen(true);
-            }, 0);
-        }
-    }, [enabled, examId]);
 
     // Store callbacks in refs to avoid effect re-runs
     const onViolationRef = useRef(onViolation);
     const onAutoSubmitRef = useRef(onAutoSubmit);
     const onLockChangeRef = useRef(onLockChange);
+    const onPauseStatusChangeRef = useRef(onPauseStatusChange);
 
     useEffect(() => {
         onViolationRef.current = onViolation;
         onAutoSubmitRef.current = onAutoSubmit;
         onLockChangeRef.current = onLockChange;
-    }, [onViolation, onAutoSubmit, onLockChange]);
+        onPauseStatusChangeRef.current = onPauseStatusChange;
+    }, [onViolation, onAutoSubmit, onLockChange, onPauseStatusChange]);
 
     const getSeverityFromDuration = useCallback(
         (durationSeconds: number): Severity => {
@@ -129,15 +123,21 @@ export function useExamSecurity({
         reloadViolationLoggedRef.current = false;
     }, []);
 
-    const showWarning = useCallback((message: string) => {
-        if (warningTimerRef.current) {
-            clearTimeout(warningTimerRef.current);
+    // Initial check for resume state
+    useEffect(() => {
+        if (enabled && !isPaused && !document.fullscreenElement) {
+            isResumingRef.current = true;
+            setTimeout(() => {
+                lockExam('Security session resumed. Please re-enter fullscreen to continue.');
+                setHasEnteredFullscreen(true);
+            }, 0);
         }
-        setWarningMessage(message);
-        warningTimerRef.current = setTimeout(() => {
-            setWarningMessage(null);
-            warningTimerRef.current = null;
-        }, 6000);
+    }, [enabled, examId, isPaused, lockExam]);
+
+    const showToast = useCallback((message: string) => {
+        toast.error(message, {
+            duration: 6000,
+        });
     }, []);
 
     const logViolation = useCallback(
@@ -147,7 +147,7 @@ export function useExamSecurity({
             durationSeconds?: number,
             returnedAt?: string,
         ) => {
-            if (!enabled || isSubmittingRef.current) return;
+            if (!enabled || isSubmittingRef.current || isPaused) return;
 
             const severity =
                 durationSeconds !== undefined
@@ -175,7 +175,7 @@ export function useExamSecurity({
             const count = violationCountRef.current;
 
             if (!isFocusViolation) {
-                showWarning(`⚠️ Security Violation: ${details}`);
+                showToast(`⚠️ Security Violation: ${details}`);
             }
 
             try {
@@ -213,6 +213,7 @@ export function useExamSecurity({
                     const data = await response.json();
                     if (data.auto_submitted) {
                         isSubmittingRef.current = true;
+                        setIsKicked(true);
                         onAutoSubmitRef.current?.();
                         return;
                     }
@@ -227,14 +228,15 @@ export function useExamSecurity({
 
             if (count >= maxViolations && !isSubmittingRef.current) {
                 isSubmittingRef.current = true;
+                setIsKicked(true);
                 onAutoSubmitRef.current?.();
             }
         },
-        [attemptId, enabled, maxViolations, getSeverityFromDuration, showWarning],
+        [attemptId, enabled, isPaused, maxViolations, getSeverityFromDuration, showToast],
     );
 
     const startReloadSecuritySequence = useCallback(() => {
-        if (reloadTimerRef.current || isSubmittingRef.current) return;
+        if (!enabled || reloadTimerRef.current || isSubmittingRef.current || isPaused) return;
 
         lockExam('Security check: Please return to fullscreen to continue.');
         setReloadCountdown(10);
@@ -263,17 +265,17 @@ export function useExamSecurity({
                 
                 if (!isSubmittingRef.current) {
                     isSubmittingRef.current = true;
+                    setIsKicked(true);
                     onAutoSubmitRef.current?.();
                 }
             }
         }, 1000);
-    }, [lockExam, unlockExam, logViolation]);
+    }, [lockExam, unlockExam, logViolation, enabled, isPaused]);
 
     const handleFocusLoss = useCallback(
         (type: string, details: string) => {
-            if (!isInitializedRef.current || isSubmittingRef.current) return;
+            if (!enabled || !isInitializedRef.current || isSubmittingRef.current || isPaused) return;
 
-            // ATOMIC TIMESTAMP
             if (focusLossEventRef.current) {
                 if (type === 'tab_switch' && focusLossEventRef.current.type === 'window_blur') {
                     focusLossEventRef.current.type = type;
@@ -292,7 +294,7 @@ export function useExamSecurity({
 
             const checkInterval = 1000;
             kickTimerRef.current = setInterval(() => {
-                if (!focusLossEventRef.current || isSubmittingRef.current) {
+                if (!enabled || !focusLossEventRef.current || isSubmittingRef.current || isPaused) {
                     if (kickTimerRef.current) clearInterval(kickTimerRef.current);
                     return;
                 }
@@ -302,6 +304,7 @@ export function useExamSecurity({
 
                 if (totalWouldBe >= MAX_CUMULATIVE_AWAY_TIME) {
                     isSubmittingRef.current = true;
+                    setIsKicked(true);
                     if (kickTimerRef.current) clearInterval(kickTimerRef.current);
 
                     fetch(`/exam/attempt/${attemptId}/violation`, {
@@ -327,7 +330,7 @@ export function useExamSecurity({
                 }
             }, checkInterval);
         },
-        [attemptId, lockExam],
+        [attemptId, lockExam, enabled, isPaused],
     );
 
     const handleFocusReturn = useCallback(async () => {
@@ -346,7 +349,6 @@ export function useExamSecurity({
 
         const event = focusLossEventRef.current;
         const returnedAt = Date.now();
-        // Use floor to prevent premature kicks
         const durationSeconds = Math.floor((returnedAt - event.lostAt) / 1000);
 
         focusLossEventRef.current = null;
@@ -361,6 +363,7 @@ export function useExamSecurity({
 
         if (totalAwayTime >= MAX_CUMULATIVE_AWAY_TIME && !isSubmittingRef.current) {
             isSubmittingRef.current = true;
+            setIsKicked(true);
             await logViolation(event.type, `KICKED: Cumulative away time exceeded`, durationSeconds, new Date(returnedAt).toISOString());
             try {
                 await fetch(`/exam/attempt/${attemptId}/auto-submit`, {
@@ -378,7 +381,7 @@ export function useExamSecurity({
         else if (severity === 'medium') message += 'This activity has been recorded.';
         else message += 'Warning recorded.';
 
-        showWarning(message);
+        showToast(message);
 
         await logViolation(
             event.type,
@@ -386,7 +389,7 @@ export function useExamSecurity({
             durationSeconds,
             new Date(returnedAt).toISOString(),
         );
-    }, [attemptId, logViolation, getSeverityFromDuration, showWarning]);
+    }, [attemptId, logViolation, getSeverityFromDuration, showToast]);
 
     const enterFullscreen = useCallback(async () => {
         try {
@@ -411,17 +414,11 @@ export function useExamSecurity({
 
     const exitFullscreen = useCallback(() => {
         try {
-            // Only exit if we are actually in fullscreen and document is active
             if (document.fullscreenElement && document.visibilityState !== 'hidden') {
-                document.exitFullscreen?.().catch((err) => {
-                    // Ignore "Document not active" or "no element is in fullscreen" errors
-                    if (err.name !== 'TypeError' && !err.message.includes('not active')) {
-                        console.error('Error exiting fullscreen:', err);
-                    }
-                });
+                document.exitFullscreen?.().catch(() => {});
             }
-        } catch (e) {
-            // Silently fail as this is usually during unmount or page transition
+        } catch {
+            // Silence is golden
         }
     }, []);
 
@@ -432,71 +429,8 @@ export function useExamSecurity({
         return success;
     }, [enterFullscreen, unlockExam, handleFocusReturn]);
 
-    const clearWarning = useCallback(() => {
-        setWarningMessage(null);
-    }, []);
-
     useEffect(() => {
-        if (!enabled) return;
-
-        // If resuming, start the reload penalty
-        if (!document.fullscreenElement && !isInitializedRef.current && !isSubmittingRef.current && isResumingRef.current) {
-            // Delay to avoid React warnings
-            setTimeout(() => {
-                startReloadSecuritySequence();
-            }, 10);
-        }
-
-        const initTimer = setTimeout(() => {
-            isInitializedRef.current = true;
-        }, 3000);
-
-        const handleFullscreenChange = () => {
-            if (!document.fullscreenElement && !isSubmittingRef.current && (isResumingRef.current || hasEnteredFullscreenRef.current)) {
-                handleFocusLoss('fullscreen_exit', 'User exited fullscreen mode');
-            }
-        };
-
-        const handleVisibilityChange = () => {
-            if (document.hidden && isInitializedRef.current) {
-                handleFocusLoss('tab_switch', 'User switched to another tab');
-            }
-        };
-
-        const handleWindowBlur = () => {
-            if (isInitializedRef.current && !isSubmittingRef.current) {
-                handleFocusLoss('window_blur', 'Browser window lost focus');
-            }
-        };
-
-        const handleCopy = (e: ClipboardEvent) => { e.preventDefault(); logViolation('copy', 'User attempted to copy content'); showWarning('⚠️ Security Violation: Copying is disabled.'); };
-        const handlePaste = (e: ClipboardEvent) => { e.preventDefault(); logViolation('paste', 'User attempted to paste content'); showWarning('⚠️ Security Violation: Pasting is disabled.'); };
-        const handleCut = (e: ClipboardEvent) => { e.preventDefault(); logViolation('cut', 'User attempted to cut content'); showWarning('⚠️ Security Violation: Cutting is disabled.'); };
-        const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); };
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'F12') { e.preventDefault(); logViolation('devtools', 'User pressed F12'); showWarning('⚠️ Security Violation: DevTools are disabled.'); }
-            if (e.ctrlKey && e.shiftKey && e.key === 'I') { e.preventDefault(); logViolation('devtools', 'User attempted to open DevTools'); showWarning('⚠️ Security Violation: DevTools are disabled.'); }
-            if (e.ctrlKey && e.shiftKey && e.key === 'C') { e.preventDefault(); logViolation('devtools', 'User attempted to inspect element'); showWarning('⚠️ Security Violation: Inspector is disabled.'); }
-            if (e.ctrlKey && e.key === 'u') { e.preventDefault(); logViolation('view_source', 'User attempted to view page source'); showWarning('⚠️ Security Violation: Viewing source is disabled.'); }
-        };
-
-        const handleSelectStart = (e: Event) => {
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-            e.preventDefault();
-        };
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('blur', handleWindowBlur);
-        document.addEventListener('copy', handleCopy);
-        document.addEventListener('paste', handlePaste);
-        document.addEventListener('cut', handleCut);
-        document.addEventListener('contextmenu', handleContextMenu);
-        document.addEventListener('keydown', handleKeyDown);
-        document.addEventListener('selectstart', handleSelectStart);
+        if (!attemptId) return;
 
         const validateSession = async () => {
             try {
@@ -512,32 +446,118 @@ export function useExamSecurity({
         };
 
         const heartbeatInterval = setInterval(async () => {
-            try { await fetch(`/exam/attempt/${attemptId}/heartbeat`, {
-                method: 'POST',
-                headers: { 'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || '') },
-            }); } catch (e) { console.error(e); }
-        }, 30000);
+            try { 
+                const response = await fetch(`/exam/attempt/${attemptId}/heartbeat`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status && data.status !== 'in_progress') {
+                        setIsKicked(true);
+                        window.location.reload();
+                        return;
+                    }
+                    if (data.is_paused !== undefined) {
+                        onPauseStatusChangeRef.current?.(!!data.is_paused);
+                    }
+                } else if (response.status === 403) {
+                    window.location.reload();
+                } else if (response.status === 400) {
+                    onPauseStatusChangeRef.current?.(true);
+                }
+            } catch (e) { console.error(e); }
+        }, 15000);
 
         validateSession();
         const sessionInterval = setInterval(validateSession, 60000);
 
+        if (enabled) {
+            if (!document.fullscreenElement && !isInitializedRef.current && !isSubmittingRef.current && isResumingRef.current && !isPaused) {
+                setTimeout(() => {
+                    startReloadSecuritySequence();
+                }, 10);
+            }
+
+            const initTimer = setTimeout(() => {
+                isInitializedRef.current = true;
+            }, 3000);
+
+            const handleFullscreenChange = () => {
+                if (!isPaused && !document.fullscreenElement && !isSubmittingRef.current && (isResumingRef.current || hasEnteredFullscreenRef.current)) {
+                    handleFocusLoss('fullscreen_exit', 'User exited fullscreen mode');
+                }
+            };
+
+            const handleVisibilityChange = () => {
+                if (!isPaused && document.hidden && isInitializedRef.current) {
+                    handleFocusLoss('tab_switch', 'User switched to another tab');
+                }
+            };
+
+            const handleWindowBlur = () => {
+                if (!isPaused && isInitializedRef.current && !isSubmittingRef.current) {
+                    handleFocusLoss('window_blur', 'Browser window lost focus');
+                }
+            };
+
+            const handleCopy = (e: ClipboardEvent) => { e.preventDefault(); logViolation('copy', 'User attempted to copy content'); };
+            const handlePaste = (e: ClipboardEvent) => { e.preventDefault(); logViolation('paste', 'User attempted to paste content'); };
+            const handleCut = (e: ClipboardEvent) => { e.preventDefault(); logViolation('cut', 'User attempted to cut content'); };
+            const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); };
+
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'F12') { e.preventDefault(); logViolation('devtools', 'User pressed F12'); }
+                if (e.ctrlKey && e.shiftKey && e.key === 'I') { e.preventDefault(); logViolation('devtools', 'User attempted to open DevTools'); }
+                if (e.ctrlKey && e.shiftKey && e.key === 'C') { e.preventDefault(); logViolation('devtools', 'User attempted to inspect element'); }
+                if (e.ctrlKey && e.key === 'u') { e.preventDefault(); logViolation('view_source', 'User attempted to view page source'); }
+            };
+
+            const handleSelectStart = (e: Event) => {
+                const target = e.target as HTMLElement;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+                e.preventDefault();
+            };
+
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('blur', handleWindowBlur);
+            document.addEventListener('copy', handleCopy);
+            document.addEventListener('paste', handlePaste);
+            document.addEventListener('cut', handleCut);
+            document.addEventListener('contextmenu', handleContextMenu);
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('selectstart', handleSelectStart);
+
+            return () => {
+                document.removeEventListener('fullscreenchange', handleFullscreenChange);
+                document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+                window.removeEventListener('blur', handleWindowBlur);
+                document.removeEventListener('copy', handleCopy);
+                document.removeEventListener('paste', handlePaste);
+                document.removeEventListener('cut', handleCut);
+                document.removeEventListener('contextmenu', handleContextMenu);
+                document.removeEventListener('keydown', handleKeyDown);
+                document.removeEventListener('selectstart', handleSelectStart);
+                clearInterval(heartbeatInterval);
+                clearInterval(sessionInterval);
+                if (kickTimerRef.current) clearInterval(kickTimerRef.current);
+                if (reloadTimerRef.current) clearInterval(reloadTimerRef.current);
+                clearTimeout(initTimer);
+            };
+        }
+
         return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('blur', handleWindowBlur);
-            document.removeEventListener('copy', handleCopy);
-            document.removeEventListener('paste', handlePaste);
-            document.removeEventListener('cut', handleCut);
-            document.removeEventListener('contextmenu', handleContextMenu);
-            document.removeEventListener('keydown', handleKeyDown);
-            document.removeEventListener('selectstart', handleSelectStart);
             clearInterval(heartbeatInterval);
             clearInterval(sessionInterval);
-            clearTimeout(initTimer);
-            if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
         };
-    }, [attemptId, enabled, logViolation, handleFocusLoss, startReloadSecuritySequence, showWarning]);
+    }, [attemptId, enabled, isPaused, logViolation, handleFocusLoss, startReloadSecuritySequence]);
 
     const setSubmitting = useCallback((value: boolean) => {
         isSubmittingRef.current = value;
@@ -548,12 +568,11 @@ export function useExamSecurity({
         exitFullscreen,
         returnToExam,
         setSubmitting,
-        clearWarning,
         isLocked,
+        isKicked,
         lockReason,
         reloadCountdown,
         lastAbsenceDuration,
-        warningMessage,
         hasEnteredFullscreen,
         logViolation,
     };

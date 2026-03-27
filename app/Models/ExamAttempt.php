@@ -29,11 +29,17 @@ class ExamAttempt extends Model
         'submitted_at',
         'status',
         'is_paused',
+        'paused_at',
+        'total_paused_seconds',
         'extra_time_minutes',
         'score',
         'total_points',
         'percentage',
         'violation_count',
+        'penalty_points',
+        'penalty_reason',
+        'is_published',
+        'published_at',
         'auto_submitted',
         'ip_address',
         'user_agent',
@@ -47,11 +53,16 @@ class ExamAttempt extends Model
         return [
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
+            'paused_at' => 'datetime',
             'score' => 'decimal:2',
             'total_points' => 'decimal:2',
             'percentage' => 'decimal:2',
+            'penalty_points' => 'decimal:2',
+            'is_published' => 'boolean',
+            'published_at' => 'datetime',
             'auto_submitted' => 'boolean',
             'is_paused' => 'boolean',
+            'total_paused_seconds' => 'integer',
             'extra_time_minutes' => 'integer',
         ];
     }
@@ -102,10 +113,20 @@ class ExamAttempt extends Model
             return 0;
         }
 
-        $endTime = $this->started_at->addMinutes($this->exam->duration_minutes + $this->extra_time_minutes);
-        $remaining = now()->diffInSeconds($endTime, false);
+        // Base end time
+        $endTime = $this->started_at->copy()->addMinutes($this->exam->duration_minutes + $this->extra_time_minutes);
 
-        return max(0, $remaining);
+        // Add paused time
+        $pausedSeconds = (int) $this->total_paused_seconds;
+        if ($this->is_paused && $this->paused_at) {
+            // In this project, older->diffInSeconds(newer) is positive
+            $pausedSeconds += $this->paused_at->diffInSeconds(now());
+        }
+
+        $endTime = $endTime->addSeconds($pausedSeconds);
+        $remaining = now()->diffInSeconds($endTime);
+
+        return (int) max(0, $remaining);
     }
 
     public function isExpired(): bool

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Exam;
 
+use App\Events\Exam\ExamAnswerSaved;
+use App\Events\Exam\ExamAttemptStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Exam\LogViolationRequest;
 use App\Http\Requests\Exam\SubmitAnswerRequest;
@@ -62,6 +64,13 @@ class ExamAttemptController extends Controller
             'user_agent' => request()->userAgent(),
         ]);
 
+        // Broadcast to monitor (New Student Joins!)
+        broadcast(new ExamAttemptStatusChanged(
+            $exam->id,
+            $user->id,
+            ExamAttempt::STATUS_IN_PROGRESS
+        ));
+
         // Create session token for multi-tab detection
         ExamSession::query()->create([
             'attempt_id' => $attempt->id,
@@ -89,14 +98,14 @@ class ExamAttemptController extends Controller
      */
     public function take(ExamAttempt $attempt): Response|RedirectResponse
     {
-        Gate::authorize('update', $attempt);
-
-        // Check if attempt is still valid
+        // Check if attempt is still valid BEFORE authorizing (prevents 403 screen on auto-submit)
         if (! $attempt->isInProgress()) {
             return redirect()
                 ->route('student.exams.show', $attempt->exam_id)
                 ->with('error', 'This exam attempt has expired or been submitted.');
         }
+
+        Gate::authorize('update', $attempt);
 
         $exam = $attempt->exam;
         $questions = $exam->questions()
@@ -140,6 +149,7 @@ class ExamAttemptController extends Controller
                 'started_at' => $attempt->started_at,
                 'remaining_time' => $attempt->remaining_time,
                 'violation_count' => $attempt->violation_count,
+                'is_paused' => $attempt->is_paused,
             ],
             'exam' => [
                 'id' => $exam->id,
@@ -157,6 +167,10 @@ class ExamAttemptController extends Controller
      */
     public function saveAnswer(SubmitAnswerRequest $request, ExamAttempt $attempt): JsonResponse
     {
+        if ($attempt->is_paused) {
+            return response()->json(['error' => 'Exam is currently paused'], 400);
+        }
+
         $validated = $request->validated();
 
         // Verify question belongs to the exam
@@ -177,10 +191,23 @@ class ExamAttemptController extends Controller
             ]
         );
 
-        // Update session activity
-        $attempt->activeSession?->update(['last_activity' => now()]);
+        // Get current progress
+        $answeredCount = $attempt->answers()->count();
+        $totalQuestions = $attempt->exam->questions_count ?? $attempt->exam->questions()->count();
 
-        return response()->json(['success' => true]);
+        // Notify monitor (Real-time progress!)
+        broadcast(new ExamAnswerSaved(
+            $attempt->exam_id,
+            $attempt->id,
+            $answeredCount,
+            $totalQuestions
+        ));
+
+        return response()->json([
+            'success' => true,
+            'answered_count' => $answeredCount,
+            'total_questions' => $totalQuestions,
+        ]);
     }
 
     /**
@@ -191,6 +218,13 @@ class ExamAttemptController extends Controller
         Gate::authorize('submit', $attempt);
 
         $this->finalizeAttempt($attempt, false);
+
+        // Notify monitor (Student Submits!)
+        broadcast(new ExamAttemptStatusChanged(
+            $attempt->exam_id,
+            $attempt->student_id,
+            ExamAttempt::STATUS_SUBMITTED
+        ));
 
         return redirect()
             ->route('student.exams.show', $attempt->exam_id)
@@ -206,11 +240,22 @@ class ExamAttemptController extends Controller
             return response()->json(['error' => 'Attempt already submitted'], 400);
         }
 
+        if ($attempt->is_paused) {
+            return response()->json(['error' => 'Cannot auto-submit a paused exam'], 400);
+        }
+
         if ($attempt->student_id !== auth()->id()) {
             abort(403);
         }
 
         $this->finalizeAttempt($attempt, true);
+
+        // Notify monitor (Student Auto-Submitted!)
+        broadcast(new ExamAttemptStatusChanged(
+            $attempt->exam_id,
+            $attempt->student_id,
+            ExamAttempt::STATUS_AUTO_SUBMITTED
+        ));
 
         return redirect()
             ->route('student.exams.show', $attempt->exam_id)
@@ -224,6 +269,10 @@ class ExamAttemptController extends Controller
     {
         if ($attempt->status !== ExamAttempt::STATUS_IN_PROGRESS) {
             return response()->json(['error' => 'Exam already submitted'], 400);
+        }
+
+        if ($attempt->is_paused) {
+            return response()->json(['error' => 'Exam is currently paused'], 400);
         }
 
         $validated = $request->validated();
@@ -262,6 +311,14 @@ class ExamAttemptController extends Controller
             'returned_at' => $validated['returned_at'] ?? null,
             'ip_address' => request()->ip(),
         ]);
+
+        // Broadcast to monitor instantly (Teacher dashboard)
+        broadcast(new \App\Events\Exam\ExamViolationLogged(
+            $attempt->exam_id,
+            auth()->user()->name,
+            $validated['violation_type'],
+            $severity
+        ));
 
         // Only increment violation count if it counts
         if ($countAsViolation) {
@@ -349,10 +406,14 @@ class ExamAttemptController extends Controller
             $session->update(['last_activity' => now()]);
         }
 
+        // Ensure we load the fresh database state (avoid implicit route binding caching)
+        $attempt->refresh();
+
         return response()->json([
             'success' => true,
             'remaining_time' => $attempt->remaining_time,
             'status' => $attempt->status,
+            'is_paused' => $attempt->is_paused,
         ]);
     }
 

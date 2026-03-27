@@ -17,9 +17,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,7 @@ export default function AssignStudents({ exam, students, groups }: Props) {
     // Reset form when props change
     useEffect(() => {
         setData('student_ids', initialSelectedIds);
-    }, [initialSelectedIds]);
+    }, [initialSelectedIds, setData]);
 
     const filteredStudents = useMemo(() => {
         return students.filter(

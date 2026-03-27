@@ -1,0 +1,34 @@
+
+> lint:check
+> eslint .
+
+
+C:\Users\J.P.M\projects\examen_app\resources\js\hooks\use-exam-security.ts
+  130:13  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\J.P.M\projects\examen_app\resources\js\hooks\use-exam-security.ts:130:13
+  128 |         if (enabled && !isPaused && !document.fullscreenElement) {
+  129 |             isResumingRef.current = true;
+> 130 |             lockExam('Security session resumed. Please re-enter fullscreen to continue.');
+      |             ^^^^^^^^ Avoid calling setState() directly within an effect
+  131 |             setTimeout(() => {
+  132 |                 setHasEnteredFullscreen(true);
+  133 |             }, 0);  react-hooks/set-state-in-effect
+  420:17  error  Empty block statement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-empty
+
+C:\Users\J.P.M\projects\examen_app\resources\js\pages\exams\instructor\monitor.tsx
+  111:10  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  122:10  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  139:10  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\J.P.M\projects\examen_app\resources\js\pages\exams\student\take.tsx
+  110:8  warning  React Hook useEffect has missing dependencies: 'exitFullscreen' and 'isPaused'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+Ô£û 6 problems (5 errors, 1 warning)
+

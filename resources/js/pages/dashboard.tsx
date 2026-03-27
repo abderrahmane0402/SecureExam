@@ -6,12 +6,12 @@ import {
     GraduationCap,
     PlusCircle,
     Play,
-    CheckCircle,
     BarChart3,
     ArrowRight,
     Shield,
     AlertTriangle,
     Lightbulb,
+    Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -71,10 +71,10 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                             <div className="mb-3 rounded-full bg-blue-100 p-3 transition-transform group-hover:scale-110 dark:bg-blue-900/50">
                                 <PlusCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <CardTitle className="text-base">
+                            <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.createExam')}
                             </CardTitle>
-                            <CardDescription className="mt-1 text-xs">
+                            <CardDescription className="mt-1 text-xs font-bold">
                                 {t('dashboard.createExam.desc')}
                             </CardDescription>
                         </CardContent>
@@ -87,10 +87,10 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                             <div className="mb-3 rounded-full bg-green-100 p-3 transition-transform group-hover:scale-110 dark:bg-green-900/50">
                                 <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
                             </div>
-                            <CardTitle className="text-base">
+                            <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.myExams')}
                             </CardTitle>
-                            <CardDescription className="mt-1 text-xs">
+                            <CardDescription className="mt-1 text-xs font-bold">
                                 {t('dashboard.myExams.desc')}
                             </CardDescription>
                         </CardContent>
@@ -103,8 +103,8 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                             <div className="mb-3 rounded-full bg-purple-100 p-3 transition-transform group-hover:scale-110 dark:bg-purple-900/50">
                                 <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                             </div>
-                            <CardTitle className="text-base">{t('dashboard.monitor')}</CardTitle>
-                            <CardDescription className="mt-1 text-xs">
+                            <CardTitle className="text-base font-black uppercase tracking-tight">{t('dashboard.monitor')}</CardTitle>
+                            <CardDescription className="mt-1 text-xs font-bold">
                                 {t('dashboard.monitor.desc')}
                             </CardDescription>
                         </CardContent>
@@ -117,8 +117,8 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                             <div className="mb-3 rounded-full bg-orange-100 p-3 transition-transform group-hover:scale-110 dark:bg-orange-900/50">
                                 <BarChart3 className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                             </div>
-                            <CardTitle className="text-base">{t('dashboard.grading')}</CardTitle>
-                            <CardDescription className="mt-1 text-xs">
+                            <CardTitle className="text-base font-black uppercase tracking-tight">{t('dashboard.grading')}</CardTitle>
+                            <CardDescription className="mt-1 text-xs font-bold">
                                 {t('dashboard.grading.desc')}
                             </CardDescription>
                         </CardContent>
@@ -247,10 +247,10 @@ function StudentDashboard({ t }: { t: TFunction }) {
                             <div className="mb-3 rounded-full bg-green-100 p-3 transition-transform group-hover:scale-110 dark:bg-green-900/50">
                                 <Play className="h-6 w-6 text-green-600 dark:text-green-400" />
                             </div>
-                            <CardTitle className="text-base">
+                            <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.availableExams')}
                             </CardTitle>
-                            <CardDescription className="mt-1 text-xs">
+                            <CardDescription className="mt-1 text-xs font-bold">
                                 {t('dashboard.availableExams.desc')}
                             </CardDescription>
                         </CardContent>
@@ -263,24 +263,24 @@ function StudentDashboard({ t }: { t: TFunction }) {
                             <div className="mb-3 rounded-full bg-blue-100 p-3 transition-transform group-hover:scale-110 dark:bg-blue-900/50">
                                 <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <CardTitle className="text-base">
+                            <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.inProgress')}
                             </CardTitle>
-                            <CardDescription className="mt-1 text-xs">
+                            <CardDescription className="mt-1 text-xs font-bold">
                                 {t('dashboard.inProgress.desc')}
                             </CardDescription>
                         </CardContent>
                     </Card>
                 </Link>
 
-                <Link href="/student/exams" className="group">
+                <Link href="/student/results" className="group">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-purple-200 hover:shadow-lg dark:hover:border-purple-900">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-purple-100 p-3 transition-transform group-hover:scale-110 dark:bg-purple-900/50">
-                                <CheckCircle className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                <Trophy className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                             </div>
-                            <CardTitle className="text-base">{t('dashboard.results')}</CardTitle>
-                            <CardDescription className="mt-1 text-xs">
+                            <CardTitle className="text-base font-black uppercase tracking-tight">{t('dashboard.results')}</CardTitle>
+                            <CardDescription className="mt-1 text-xs font-bold">
                                 {t('dashboard.results.desc')}
                             </CardDescription>
                         </CardContent>
@@ -386,7 +386,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                                         <span className="text-lg">
                                             {rule.icon}
                                         </span>
-                                        <p className="text-sm">{rule.text}</p>
+                                        <p className="text-sm font-medium">{rule.text}</p>
                                     </div>
                                 ))}
                             </div>
@@ -395,7 +395,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                     <div className="p-6 pt-0">
                         <div className="flex items-center gap-2 rounded-lg bg-amber-100 p-3 dark:bg-amber-900/30">
                             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                            <p className="text-sm font-black uppercase tracking-tight text-amber-700 dark:text-amber-300">
                                 {t('dashboard.violationWarning')}
                             </p>
                         </div>

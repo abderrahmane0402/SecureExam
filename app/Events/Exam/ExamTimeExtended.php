@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Events;
+namespace App\Events\Exam;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -8,7 +8,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TeacherMessageBroadcast implements ShouldBroadcastNow
+class ExamTimeExtended implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -16,9 +16,9 @@ class TeacherMessageBroadcast implements ShouldBroadcastNow
      * Create a new event instance.
      */
     public function __construct(
-        public int $examId,
-        public string $message,
-        public string $teacherName
+        public int $exam_id,
+        public int $attempt_id,
+        public int $new_remaining_time
     ) {}
 
     /**
@@ -29,21 +29,7 @@ class TeacherMessageBroadcast implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('exam-room.'.$this->examId),
-        ];
-    }
-
-    /**
-     * Get the data to broadcast.
-     *
-     * @return array<string, mixed>
-     */
-    public function broadcastWith(): array
-    {
-        return [
-            'message' => $this->message,
-            'teacher_name' => $this->teacherName,
-            'timestamp' => now()->toIso8601String(),
+            new PrivateChannel('exam-room.'.$this->exam_id),
         ];
     }
 
@@ -52,6 +38,6 @@ class TeacherMessageBroadcast implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'TeacherMessageBroadcast';
+        return 'ExamTimeExtended';
     }
 }

@@ -43,6 +43,15 @@ class ExamAttemptPaused implements ShouldBroadcastNow
         return [
             'attempt_id' => $this->attempt->id,
             'is_paused' => $this->isPaused,
+            'remaining_time' => $this->attempt->remaining_time,
         ];
+    }
+
+    /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'ExamAttemptPaused';
     }
 }

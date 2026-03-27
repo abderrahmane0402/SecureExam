@@ -19,16 +19,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useLanguageStandalone } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Exams', href: '/exams' },
-    { title: 'Create Exam', href: '/exams/create' },
-];
-
 export default function CreateExam() {
+    const { t } = useLanguageStandalone();
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         type: 'auto',
@@ -43,6 +39,12 @@ export default function CreateExam() {
         passing_score: null as number | null,
     });
 
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: t('common.dashboard'), href: '/dashboard' },
+        { title: t('exams.title'), href: '/exams' },
+        { title: t('exams.create.title'), href: '/exams/create' },
+    ];
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/exams');
@@ -50,42 +52,39 @@ export default function CreateExam() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Create Exam" />
+            <Head title={t('exams.create.title')} />
             <div className="mx-auto max-w-3xl space-y-6 p-6">
                 {/* Header */}
                 <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <h1 className="text-2xl font-bold">Create New Exam</h1>
-                    <p className="mt-1 opacity-90">
-                        Set up your exam details. You can add questions after
-                        creating the exam.
-                    </p>
+                    <h1 className="text-2xl font-bold">{t('exams.create.title')}</h1>
+                    <p className="mt-1 opacity-90">{t('exams.create.subtitle')}</p>
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Exam Details</CardTitle>
+                        <CardTitle>{t('exams.details')}</CardTitle>
                         <CardDescription>
-                            Configure the basic settings for your exam.
+                            {t('exams.details.description')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="title">Title *</Label>
+                                    <Label htmlFor="title">{t('exams.fields.title')} *</Label>
                                     <Input
                                         id="title"
                                         value={data.title}
                                         onChange={(e) =>
                                             setData('title', e.target.value)
                                         }
-                                        placeholder="e.g., Midterm Exam"
+                                        placeholder={t('exams.fields.title.placeholder')}
                                     />
                                     <InputError message={errors.title} />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="type">Correction Type *</Label>
+                                    <Label htmlFor="type">{t('exams.fields.type')} *</Label>
                                     <Select
                                         value={data.type}
                                         onValueChange={(value) =>
@@ -93,14 +92,14 @@ export default function CreateExam() {
                                         }
                                     >
                                         <SelectTrigger id="type">
-                                            <SelectValue placeholder="Select type" />
+                                            <SelectValue placeholder={t('exams.fields.type.placeholder')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="auto">
-                                                Auto-Correction (MCQ only)
+                                                {t('exams.fields.type.auto')}
                                             </SelectItem>
                                             <SelectItem value="hybrid">
-                                                Hybrid (Includes Free Text)
+                                                {t('exams.fields.type.hybrid')}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -109,14 +108,14 @@ export default function CreateExam() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">{t('exams.fields.description')}</Label>
                                 <Textarea
                                     id="description"
                                     value={data.description}
                                     onChange={(e) =>
                                         setData('description', e.target.value)
                                     }
-                                    placeholder="Instructions or notes for students..."
+                                    placeholder={t('exams.fields.description.placeholder')}
                                 />
                                 <InputError message={errors.description} />
                             </div>
@@ -124,7 +123,7 @@ export default function CreateExam() {
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="duration">
-                                        Duration (minutes) *
+                                        {t('exams.fields.duration')} *
                                     </Label>
                                     <Input
                                         id="duration"
@@ -146,7 +145,7 @@ export default function CreateExam() {
 
                                 <div className="space-y-2">
                                     <Label htmlFor="attempts">
-                                        Allowed Attempts *
+                                        {t('exams.fields.attempts')} *
                                     </Label>
                                     <Input
                                         id="attempts"
@@ -170,7 +169,7 @@ export default function CreateExam() {
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="start_time">
-                                        Start Time *
+                                        {t('exams.fields.start_time')} *
                                     </Label>
                                     <Input
                                         id="start_time"
@@ -187,7 +186,7 @@ export default function CreateExam() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="end_time">End Time *</Label>
+                                    <Label htmlFor="end_time">{t('exams.fields.end_time')} *</Label>
                                     <Input
                                         id="end_time"
                                         type="datetime-local"
@@ -202,9 +201,9 @@ export default function CreateExam() {
 
                             <div className="space-y-2">
                                 <Label htmlFor="passing_score">
-                                    Passing Score (%){' '}
+                                    {t('exams.fields.passing_score')} {' '}
                                     <span className="text-muted-foreground">
-                                        (optional)
+                                        {t('exams.fields.passing_score.optional')}
                                     </span>
                                 </Label>
                                 <Input
@@ -221,13 +220,13 @@ export default function CreateExam() {
                                                 : null,
                                         )
                                     }
-                                    placeholder="e.g., 60"
+                                    placeholder={t('exams.fields.passing_score.placeholder')}
                                 />
                                 <InputError message={errors.passing_score} />
                             </div>
 
                             <div className="space-y-4">
-                                <h3 className="font-medium">Options</h3>
+                                <h3 className="font-medium">{t('exams.fields.options')}</h3>
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         id="shuffle_questions"
@@ -243,7 +242,7 @@ export default function CreateExam() {
                                         htmlFor="shuffle_questions"
                                         className="cursor-pointer"
                                     >
-                                        Shuffle questions for each student
+                                        {t('exams.fields.shuffle_questions')}
                                     </Label>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -261,7 +260,7 @@ export default function CreateExam() {
                                         htmlFor="shuffle_options"
                                         className="cursor-pointer"
                                     >
-                                        Shuffle answer options
+                                        {t('exams.fields.shuffle_options')}
                                     </Label>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -279,22 +278,21 @@ export default function CreateExam() {
                                         htmlFor="show_results"
                                         className="cursor-pointer"
                                     >
-                                        Show results to students after
-                                        submission
+                                        {t('exams.fields.show_results')}
                                     </Label>
                                 </div>
                             </div>
 
                             <div className="flex gap-4">
                                 <Button type="submit" disabled={processing}>
-                                    Create Exam
+                                    {t('exams.create')}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
                                     onClick={() => router.visit('/exams')}
                                 >
-                                    Cancel
+                                    {t('common.cancel')}
                                 </Button>
                             </div>
                         </form>

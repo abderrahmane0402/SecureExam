@@ -23,6 +23,32 @@ class ExamGradingService
     }
 
     /**
+     * Finalize grading and calculate the final score for an attempt.
+     */
+    public function finalizeAttempt(ExamAttempt $attempt): void
+    {
+        $totalEarned = $attempt->answers()->sum('points_earned') ?? 0;
+        $totalPossible = $attempt->exam->total_points;
+
+        $percentage = $totalPossible > 0 ? ($totalEarned / $totalPossible) * 100 : 0;
+        $finalScore = $totalEarned;
+
+        // Apply penalty if one is set (penalty_points is a fixed score deduction)
+        if ($attempt->penalty_points !== null) {
+            $finalScore = max(0, $finalScore - $attempt->penalty_points);
+            // Recalculate percentage based on final penalized score
+            $percentage = $totalPossible > 0 ? ($finalScore / $totalPossible) * 100 : 0;
+        }
+
+        $attempt->update([
+            'status' => ExamAttempt::STATUS_GRADED,
+            'score' => $finalScore,
+            'total_points' => $totalPossible,
+            'percentage' => round($percentage, 2),
+        ]);
+    }
+
+    /**
      * Grade a single answer.
      */
     public function gradeAnswer(ExamAnswer $answer): void

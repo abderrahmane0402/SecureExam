@@ -1,6 +1,6 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { PlusIcon, TrashIcon, GripVerticalIcon, UploadIcon } from 'lucide-react';
-import { useState } from 'react';
+import { PlusIcon, TrashIcon, UploadIcon, PencilIcon } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { useLanguageStandalone } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Exam, Question, QuestionType } from '@/types';
 
@@ -28,23 +38,12 @@ interface Props {
     exam: Exam & { questions: Question[] };
 }
 
-const questionTypes: { value: QuestionType; label: string }[] = [
-    {
-        value: 'multiple_choice_single',
-        label: 'Multiple Choice (Single Answer)',
-    },
-    {
-        value: 'multiple_choice_multiple',
-        label: 'Multiple Choice (Multiple Answers)',
-    },
-    { value: 'true_false', label: 'True/False' },
-    { value: 'short_text', label: 'Short Text Answer' },
-    { value: 'essay', label: 'Essay' },
-];
-
 export default function EditExam({ exam }: Props) {
-    const [showQuestionForm, setShowQuestionForm] = useState(false);
+    const { t } = useLanguageStandalone();
+    const [isQuestionSheetOpen, setIsQuestionSheetOpen] = useState(false);
+    const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
+    // Exam Settings Form
     const examForm = useForm({
         title: exam.title,
         type: exam.type as 'auto' | 'hybrid',
@@ -60,13 +59,7 @@ export default function EditExam({ exam }: Props) {
         is_published: exam.is_published,
     });
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Exams', href: '/exams' },
-        { title: exam.title, href: `/exams/${exam.id}` },
-        { title: 'Edit', href: `/exams/${exam.id}/edit` },
-    ];
-
+    // Question Form
     const questionForm = useForm<{
         type: QuestionType;
         content: string;
@@ -86,6 +79,13 @@ export default function EditExam({ exam }: Props) {
         ],
     });
 
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: t('common.dashboard'), href: '/dashboard' },
+        { title: t('exams.title'), href: '/exams' },
+        { title: exam.title, href: `/exams/${exam.id}` },
+        { title: t('exams.card.edit'), href: `/exams/${exam.id}/edit` },
+    ];
+
     const handleExamSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         examForm.put(`/exams/${exam.id}`);
@@ -93,21 +93,41 @@ export default function EditExam({ exam }: Props) {
 
     const handleQuestionSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        questionForm.post(`/exams/${exam.id}/questions`, {
+        const url = editingQuestion 
+            ? `/exams/${exam.id}/questions/${editingQuestion.id}` 
+            : `/exams/${exam.id}/questions`;
+        
+        const method = editingQuestion ? 'put' : 'post';
+
+        router[method](url, questionForm.data as any, {
             onSuccess: () => {
-                setShowQuestionForm(false);
+                setIsQuestionSheetOpen(false);
+                setEditingQuestion(null);
                 questionForm.reset();
-            },
-            onError: (errors) => {
-                console.error('Question form errors:', errors);
             },
         });
     };
 
     const handleDeleteQuestion = (questionId: number) => {
-        if (confirm('Delete this question?')) {
+        if (confirm(t('exams.questions.delete.confirm'))) {
             router.delete(`/exams/${exam.id}/questions/${questionId}`);
         }
+    };
+
+    const handleEditQuestion = (question: Question) => {
+        setEditingQuestion(question);
+        questionForm.setData({
+            type: question.type as QuestionType,
+            content: question.content,
+            points: Number(question.points),
+            correct_answer: question.correct_answer || '',
+            grading_notes: question.grading_notes || '',
+            options: (question.options || []).map(opt => ({
+                content: opt.content,
+                is_correct: !!opt.is_correct
+            })),
+        });
+        setIsQuestionSheetOpen(true);
     };
 
     const handleTogglePublish = () => {
@@ -122,761 +142,424 @@ export default function EditExam({ exam }: Props) {
     };
 
     const removeOption = (index: number) => {
-        const newOptions = questionForm.data.options.filter(
-            (_, i) => i !== index,
-        );
+        const newOptions = questionForm.data.options.filter((_, i) => i !== index);
         questionForm.setData('options', newOptions);
     };
 
-    const updateOption = (
-        index: number,
-        field: 'content' | 'is_correct',
-        value: string | boolean,
-    ) => {
+    const updateOption = (index: number, field: 'content' | 'is_correct', value: string | boolean) => {
         const newOptions = [...questionForm.data.options];
-
-        if (
-            field === 'is_correct' &&
-            questionForm.data.type === 'multiple_choice_single'
-        ) {
-            // For single choice, uncheck others
+        if (field === 'is_correct' && questionForm.data.type === 'multiple_choice_single') {
             newOptions.forEach((opt, i) => {
                 opt.is_correct = i === index ? (value as boolean) : false;
             });
         } else {
-            (newOptions[index] as Record<string, unknown>)[field] = value;
+            (newOptions[index] as any)[field] = value;
         }
-
         questionForm.setData('options', newOptions);
     };
 
-    const needsOptions = [
-        'multiple_choice_single',
-        'multiple_choice_multiple',
-    ].includes(questionForm.data.type);
+    const needsOptions = ['multiple_choice_single', 'multiple_choice_multiple'].includes(questionForm.data.type);
     const isTrueFalse = questionForm.data.type === 'true_false';
 
-    const availableQuestionTypes = questionTypes.filter((type) => {
+    const questionTypes = useMemo(() => [
+        { value: 'multiple_choice_single', label: t('exams.questions.type.mcq_single') },
+        { value: 'multiple_choice_multiple', label: t('exams.questions.type.mcq_multiple') },
+        { value: 'true_false', label: t('exams.questions.type.true_false') },
+        { value: 'short_text', label: t('exams.questions.type.short_text') },
+        { value: 'essay', label: t('exams.questions.type.essay') },
+    ], [t]);
+
+    const availableQuestionTypes = useMemo(() => {
         if (examForm.data.type === 'auto') {
-            return !['short_text', 'essay'].includes(type.value);
+            return questionTypes.filter(type => !['short_text', 'essay'].includes(type.value));
         }
-        return true;
-    });
+        return questionTypes;
+    }, [examForm.data.type, questionTypes]);
+
+    const totalPoints = useMemo(() => {
+        return exam.questions?.reduce((sum, q) => sum + Number(q.points), 0) || 0;
+    }, [exam.questions]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Edit: ${exam.title}`} />
-            <div className="flex flex-col gap-6 p-6">
+            <Head title={`${t('exams.card.edit')}: ${exam.title}`} />
+            <div className="mx-auto max-w-5xl space-y-6 p-6">
                 {/* Header */}
-                <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
                     <div>
-                        <h1 className="text-2xl font-bold">Edit Exam</h1>
+                        <h1 className="text-2xl font-bold">{t('exams.edit.title')}</h1>
                         <p className="mt-1 opacity-90">{exam.title}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Badge
-                            variant="secondary"
-                            className={
-                                exam.is_published
-                                    ? 'bg-green-500/20 text-green-100'
-                                    : 'bg-white/20 text-white'
-                            }
-                        >
-                            {exam.is_published ? 'Published' : 'Draft'}
+                    <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className={exam.is_published ? 'bg-green-500 text-white' : 'bg-white/20 text-white'}>
+                            {exam.is_published ? t('exams.status.published') : t('exams.status.draft')}
                         </Badge>
-                        <Button
-                            variant="secondary"
-                            className="bg-white/20 text-white hover:bg-white/30"
-                            onClick={handleTogglePublish}
-                        >
-                            {exam.is_published ? 'Unpublish' : 'Publish'}
+                        <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20 border-white/20" onClick={handleTogglePublish}>
+                            {exam.is_published ? t('exams.card.unpublish') : t('exams.card.publish')}
                         </Button>
                     </div>
                 </div>
 
-                {/* Exam Settings */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Exam Settings</CardTitle>
-                        <CardDescription>
-                            Update exam configuration
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleExamSubmit} className="space-y-4">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="title">Title</Label>
-                                    <Input
-                                        id="title"
-                                        value={examForm.data.title}
-                                        onChange={(e) =>
-                                            examForm.setData(
-                                                'title',
-                                                e.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={examForm.errors.title}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="type">Correction Type</Label>
-                                    <Select
-                                        value={examForm.data.type}
-                                        onValueChange={(value: 'auto' | 'hybrid') =>
-                                            examForm.setData('type', value)
-                                        }
-                                    >
-                                        <SelectTrigger id="type">
-                                            <SelectValue placeholder="Select type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="auto">
-                                                Auto-Correction (MCQ only)
-                                            </SelectItem>
-                                            <SelectItem value="hybrid">
-                                                Hybrid (Includes Free Text)
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <InputError message={examForm.errors.type} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="duration">
-                                        Duration (minutes)
-                                    </Label>
-                                    <Input
-                                        id="duration"
-                                        type="number"
-                                        value={examForm.data.duration_minutes}
-                                        onChange={(e) =>
-                                            examForm.setData(
-                                                'duration_minutes',
-                                                parseInt(e.target.value) || 60,
-                                            )
-                                        }
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="start_time">
-                                        Start Time
-                                    </Label>
-                                    <Input
-                                        id="start_time"
-                                        type="datetime-local"
-                                        value={examForm.data.start_time}
-                                        onChange={(e) =>
-                                            examForm.setData(
-                                                'start_time',
-                                                e.target.value,
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="end_time">End Time</Label>
-                                    <Input
-                                        id="end_time"
-                                        type="datetime-local"
-                                        value={examForm.data.end_time}
-                                        onChange={(e) =>
-                                            examForm.setData(
-                                                'end_time',
-                                                e.target.value,
-                                            )
-                                        }
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="allowed_attempts">
-                                        Allowed Attempts
-                                    </Label>
-                                    <Input
-                                        id="allowed_attempts"
-                                        type="number"
-                                        min="1"
-                                        value={examForm.data.allowed_attempts}
-                                        onChange={(e) =>
-                                            examForm.setData(
-                                                'allowed_attempts',
-                                                parseInt(e.target.value) || 1,
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="passing_score">
-                                        Passing Score (%)
-                                    </Label>
-                                    <Input
-                                        id="passing_score"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        value={examForm.data.passing_score ?? ''}
-                                        onChange={(e) =>
-                                            examForm.setData(
-                                                'passing_score',
-                                                parseInt(e.target.value) || 0,
-                                            )
-                                        }
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-x-6 gap-y-2">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="shuffle_questions"
-                                        checked={
-                                            examForm.data.shuffle_questions
-                                        }
-                                        onCheckedChange={(checked) =>
-                                            examForm.setData(
-                                                'shuffle_questions',
-                                                checked as boolean,
-                                            )
-                                        }
-                                    />
-                                    <Label htmlFor="shuffle_questions">
-                                        Shuffle questions
-                                    </Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="shuffle_options"
-                                        checked={examForm.data.shuffle_options}
-                                        onCheckedChange={(checked) =>
-                                            examForm.setData(
-                                                'shuffle_options',
-                                                checked as boolean,
-                                            )
-                                        }
-                                    />
-                                    <Label htmlFor="shuffle_options">
-                                        Shuffle options
-                                    </Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="show_results"
-                                        checked={examForm.data.show_results}
-                                        onCheckedChange={(checked) =>
-                                            examForm.setData(
-                                                'show_results',
-                                                checked as boolean,
-                                            )
-                                        }
-                                    />
-                                    <Label htmlFor="show_results">
-                                        Show results
-                                    </Label>
-                                </div>
-                            </div>
-
-                            <Button
-                                type="submit"
-                                disabled={examForm.processing}
-                            >
-                                Save Changes
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-
-                {/* Questions */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle>
-                                    Questions ({exam.questions?.length || 0})
-                                </CardTitle>
-                                <CardDescription>
-                                    Total points:{' '}
-                                    {exam.questions?.reduce(
-                                        (sum, q) => sum + Number(q.points),
-                                        0,
-                                    ) || 0}
-                                </CardDescription>
-                            </div>
-                            <Button onClick={() => setShowQuestionForm(true)}>
-                                <PlusIcon className="size-4" />
-                                Add Question
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* Bulk Import */}
-                        {!showQuestionForm && (
-                            <div className="rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 p-6 bg-slate-50/30">
-                                <div className="flex flex-col md:flex-row items-center gap-6">
-                                    <div className="flex size-12 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border shadow-sm shrink-0">
-                                        <UploadIcon className="size-6 text-blue-600" />
+                <div className="grid gap-6 lg:grid-cols-3">
+                    {/* Left Column: Settings */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('exams.details')}</CardTitle>
+                                <CardDescription>{t('exams.details.description')}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleExamSubmit} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="title">{t('exams.fields.title')}</Label>
+                                        <Input
+                                            id="title"
+                                            value={examForm.data.title}
+                                            onChange={(e) => examForm.setData('title', e.target.value)}
+                                        />
+                                        <InputError message={examForm.errors.title} />
                                     </div>
-                                    <div className="flex-1 text-center md:text-left">
-                                        <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight text-xs italic">Bulk Import (Aiken Format)</h3>
-                                        <p className="text-[10px] font-bold text-slate-500 mt-0.5 uppercase tracking-widest leading-relaxed">Quickly add multiple choice questions from a text file. Each question should have options A, B, C, D and an ANSWER line.</p>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="type">{t('exams.fields.type')}</Label>
+                                        <Select
+                                            value={examForm.data.type}
+                                            onValueChange={(value: 'auto' | 'hybrid') => examForm.setData('type', value)}
+                                        >
+                                            <SelectTrigger id="type">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="auto">{t('exams.fields.type.auto')}</SelectItem>
+                                                <SelectItem value="hybrid">{t('exams.fields.type.hybrid')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <InputError message={examForm.errors.type} />
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Button variant="ghost" size="sm" className="font-black text-[9px] uppercase tracking-widest h-9" onClick={() => {
-                                            const aikenTemplate = "What is the capital of France?\nA) Paris\nB) Lyon\nC) Marseille\nD) Berlin\nANSWER: A";
-                                            const blob = new Blob([aikenTemplate], { type: 'text/plain' });
-                                            const url = window.URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = 'aiken_template.txt';
-                                            a.click();
-                                        }}>
-                                            Template
-                                        </Button>
-                                        <label className="cursor-pointer inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all shadow-md shadow-blue-200 h-9">
-                                            Select .txt
-                                            <input 
-                                                type="file" 
-                                                className="hidden" 
-                                                accept=".txt"
-                                                onChange={(e) => {
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="duration">{t('exams.fields.duration')}</Label>
+                                        <Input
+                                            id="duration"
+                                            type="number"
+                                            value={examForm.data.duration_minutes}
+                                            onChange={(e) => examForm.setData('duration_minutes', parseInt(e.target.value) || 60)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="start_time">{t('exams.fields.start_time')}</Label>
+                                        <Input
+                                            id="start_time"
+                                            type="datetime-local"
+                                            value={examForm.data.start_time}
+                                            onChange={(e) => examForm.setData('start_time', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="end_time">{t('exams.fields.end_time')}</Label>
+                                        <Input
+                                            id="end_time"
+                                            type="datetime-local"
+                                            value={examForm.data.end_time}
+                                            onChange={(e) => examForm.setData('end_time', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="allowed_attempts">{t('exams.fields.attempts')}</Label>
+                                        <Input
+                                            id="allowed_attempts"
+                                            type="number"
+                                            min="1"
+                                            value={examForm.data.allowed_attempts}
+                                            onChange={(e) => examForm.setData('allowed_attempts', parseInt(e.target.value) || 1)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="passing_score">{t('exams.fields.passing_score')}</Label>
+                                        <Input
+                                            id="passing_score"
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            value={examForm.data.passing_score ?? ''}
+                                            onChange={(e) => examForm.setData('passing_score', parseInt(e.target.value) || 0)}
+                                        />
+                                    </div>
+
+                                    <Separator className="my-4" />
+
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="shuffle_questions"
+                                                checked={examForm.data.shuffle_questions}
+                                                onCheckedChange={(checked) => examForm.setData('shuffle_questions', checked as boolean)}
+                                            />
+                                            <Label htmlFor="shuffle_questions" className="text-sm cursor-pointer">{t('exams.fields.shuffle_questions')}</Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="shuffle_options"
+                                                checked={examForm.data.shuffle_options}
+                                                onCheckedChange={(checked) => examForm.setData('shuffle_options', checked as boolean)}
+                                            />
+                                            <Label htmlFor="shuffle_options" className="text-sm cursor-pointer">{t('exams.fields.shuffle_options')}</Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="show_results"
+                                                checked={examForm.data.show_results}
+                                                onCheckedChange={(checked) => examForm.setData('show_results', checked as boolean)}
+                                            />
+                                            <Label htmlFor="show_results" className="text-sm cursor-pointer">{t('exams.fields.show_results')}</Label>
+                                        </div>
+                                    </div>
+
+                                    <Button type="submit" className="w-full" disabled={examForm.processing}>
+                                        {t('common.save')}
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Right Column: Questions */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>{t('exams.questions.title')} ({exam.questions?.length || 0})</CardTitle>
+                                    <CardDescription>{t('exams.questions.points_total')}: {totalPoints}</CardDescription>
+                                </div>
+                                <Button onClick={() => { setEditingQuestion(null); questionForm.reset(); setIsQuestionSheetOpen(true); }}>
+                                    <PlusIcon className="mr-2 size-4" />
+                                    {t('exams.questions.add')}
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {/* Bulk Import */}
+                                <div className="rounded-xl border border-dashed p-4 bg-muted/30">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex size-10 items-center justify-center rounded-lg bg-background border shadow-sm">
+                                            <UploadIcon className="size-5 text-blue-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-sm font-semibold truncate">{t('exams.questions.import.aiken')}</h3>
+                                            <p className="text-xs text-muted-foreground line-clamp-1">{t('exams.questions.import.aiken.desc')}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => {
+                                                const aikenTemplate = "What is the capital of France?\nA) Paris\nB) Lyon\nC) Marseille\nD) Berlin\nANSWER: A";
+                                                const blob = new Blob([aikenTemplate], { type: 'text/plain' });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement('a'); a.href = url; a.download = 'aiken_template.txt'; a.click();
+                                            }}>
+                                                {t('exams.questions.import.template')}
+                                            </Button>
+                                            <label className="cursor-pointer inline-flex items-center justify-center rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 h-8">
+                                                {t('exams.questions.import.select')}
+                                                <input type="file" className="hidden" accept=".txt" onChange={(e) => {
                                                     const file = e.target.files?.[0];
                                                     if (file) {
                                                         const formData = new FormData();
                                                         formData.append('file', file);
                                                         router.post(`/exams/${exam.id}/questions/import-aiken`, formData as any);
                                                     }
-                                                }}
-                                            />
-                                        </label>
+                                                }} />
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
+
+                                {/* Questions List */}
+                                <div className="space-y-4">
+                                    {exam.questions?.length === 0 ? (
+                                        <p className="text-center py-8 text-muted-foreground">{t('exams.questions.none') || "No questions yet."}</p>
+                                    ) : (
+                                        exam.questions?.map((question, index) => (
+                                            <div key={question.id} className="group relative rounded-lg border p-4 hover:border-primary/50 transition-colors">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-xs font-bold text-muted-foreground">#{index + 1}</span>
+                                                            <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                                                                {t(`exams.questions.type.${question.type.replace('multiple_choice_single', 'mcq_single').replace('multiple_choice_multiple', 'mcq_multiple')}` as any)}
+                                                            </Badge>
+                                                            <span className="text-xs font-semibold text-primary">{question.points} {t('exams.questions.points')}</span>
+                                                        </div>
+                                                        <p className="text-sm font-medium leading-relaxed">{question.content}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button variant="ghost" size="icon" className="size-8" onClick={() => handleEditQuestion(question)}>
+                                                            <PencilIcon className="size-4" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive/90" onClick={() => handleDeleteQuestion(question.id)}>
+                                                            <TrashIcon className="size-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </div>
+
+            {/* Question Editor Sheet */}
+            <Sheet open={isQuestionSheetOpen} onOpenChange={setIsQuestionSheetOpen}>
+                <SheetContent className="sm:max-w-xl overflow-y-auto">
+                    <SheetHeader>
+                        <SheetTitle>{editingQuestion ? t('exams.questions.edit') : t('exams.questions.new')}</SheetTitle>
+                        <SheetDescription>{t('exams.questions.new')}</SheetDescription>
+                    </SheetHeader>
+                    <form onSubmit={handleQuestionSubmit} className="space-y-6 mt-6 pb-10">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label>{t('exams.questions.type')}</Label>
+                                <Select 
+                                    value={questionForm.data.type} 
+                                    onValueChange={(value: QuestionType) => {
+                                        questionForm.setData('type', value);
+                                        if (['short_text', 'essay', 'true_false'].includes(value)) {
+                                            questionForm.setData('options', []);
+                                        } else if (questionForm.data.options.length < 2) {
+                                            questionForm.setData('options', [
+                                                { content: '', is_correct: false },
+                                                { content: '', is_correct: false },
+                                            ]);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableQuestionTypes.map(type => (
+                                            <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="q-points">{t('exams.questions.points')}</Label>
+                                <Input
+                                    id="q-points"
+                                    type="number"
+                                    min={0.1}
+                                    step={0.1}
+                                    value={questionForm.data.points}
+                                    onChange={(e) => questionForm.setData('points', parseFloat(e.target.value) || 1)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="q-content">{t('exams.questions.content')}</Label>
+                            <Textarea
+                                id="q-content"
+                                value={questionForm.data.content}
+                                onChange={(e) => questionForm.setData('content', e.target.value)}
+                                placeholder={t('exams.questions.content.placeholder')}
+                                className="min-h-[100px]"
+                            />
+                            <InputError message={questionForm.errors.content} />
+                        </div>
+
+                        {/* Options for MCQ */}
+                        {needsOptions && (
+                            <div className="space-y-3">
+                                <Label>{t('exams.questions.options')}</Label>
+                                <div className="space-y-2">
+                                    {questionForm.data.options.map((option, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <Checkbox
+                                                checked={option.is_correct}
+                                                onCheckedChange={(checked) => updateOption(index, 'is_correct', checked as boolean)}
+                                            />
+                                            <Input
+                                                value={option.content}
+                                                onChange={(e) => updateOption(index, 'content', e.target.value)}
+                                                placeholder={`${t('exams.questions.options.placeholder')} ${index + 1}`}
+                                                className="flex-1"
+                                            />
+                                            {questionForm.data.options.length > 2 && (
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => removeOption(index)}>
+                                                    <TrashIcon className="size-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <Button type="button" variant="outline" size="sm" onClick={addOption} className="w-full">
+                                    <PlusIcon className="mr-2 size-4" />
+                                    {t('exams.questions.options.add')}
+                                </Button>
                             </div>
                         )}
 
-                        {/* Add Question Form */}
-                        {showQuestionForm && (
-                            <Card className="mb-6 border-primary">
-                                <CardHeader>
-                                    <CardTitle className="text-lg">
-                                        New Question
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <form
-                                        onSubmit={handleQuestionSubmit}
-                                        className="space-y-4"
-                                    >
-                                        {/* Show all errors */}
-                                        {Object.keys(questionForm.errors)
-                                            .length > 0 && (
-                                            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                                                <p className="font-medium">
-                                                    Please fix the following
-                                                    errors:
-                                                </p>
-                                                <ul className="mt-2 list-disc pl-4">
-                                                    {Object.entries(
-                                                        questionForm.errors,
-                                                    ).map(([key, msg]) => (
-                                                        <li key={key}>{msg}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label>Question Type</Label>
-                                                <select
-                                                    value={
-                                                        questionForm.data.type
-                                                    }
-                                                    onChange={(e) => {
-                                                        questionForm.setData(
-                                                            'type',
-                                                            e.target
-                                                                .value as QuestionType,
-                                                        );
-                                                        if (
-                                                            [
-                                                                'short_text',
-                                                                'essay',
-                                                                'true_false',
-                                                            ].includes(
-                                                                e.target.value,
-                                                            )
-                                                        ) {
-                                                            questionForm.setData(
-                                                                'options',
-                                                                [],
-                                                            );
-                                                        } else {
-                                                            questionForm.setData(
-                                                                'options',
-                                                                [
-                                                                    {
-                                                                        content:
-                                                                            '',
-                                                                        is_correct: false,
-                                                                    },
-                                                                    {
-                                                                        content:
-                                                                            '',
-                                                                        is_correct: false,
-                                                                    },
-                                                                ],
-                                                            );
-                                                        }
-                                                    }}
-                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                                >
-                                                    {availableQuestionTypes.map(
-                                                        (type) => (
-                                                            <option
-                                                                key={type.value}
-                                                                value={
-                                                                    type.value
-                                                                }
-                                                            >
-                                                                {type.label}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                </select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="points">
-                                                    Points
-                                                </Label>
-                                                <Input
-                                                    id="points"
-                                                    type="number"
-                                                    min={0.01}
-                                                    step={0.01}
-                                                    value={
-                                                        questionForm.data.points
-                                                    }
-                                                    onChange={(e) =>
-                                                        questionForm.setData(
-                                                            'points',
-                                                            parseFloat(
-                                                                e.target.value,
-                                                            ) || 1,
-                                                        )
-                                                    }
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="content">
-                                                Question Text
-                                            </Label>
-                                            <textarea
-                                                id="content"
-                                                value={
-                                                    questionForm.data.content
-                                                }
-                                                onChange={(e) =>
-                                                    questionForm.setData(
-                                                        'content',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="Enter your question..."
-                                                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                            />
-                                            <InputError
-                                                message={
-                                                    questionForm.errors.content
-                                                }
-                                            />
-                                        </div>
-
-                                        {/* Options for multiple choice */}
-                                        {needsOptions && (
-                                            <div className="space-y-3">
-                                                <Label>Answer Options</Label>
-                                                {questionForm.data.options.map(
-                                                    (option, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className="flex items-center gap-2"
-                                                        >
-                                                            <Checkbox
-                                                                checked={
-                                                                    option.is_correct
-                                                                }
-                                                                onCheckedChange={(
-                                                                    checked,
-                                                                ) =>
-                                                                    updateOption(
-                                                                        index,
-                                                                        'is_correct',
-                                                                        checked as boolean,
-                                                                    )
-                                                                }
-                                                            />
-                                                            <Input
-                                                                value={
-                                                                    option.content
-                                                                }
-                                                                onChange={(e) =>
-                                                                    updateOption(
-                                                                        index,
-                                                                        'content',
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                placeholder={`Option ${index + 1}`}
-                                                                className="flex-1"
-                                                            />
-                                                            {questionForm.data
-                                                                .options
-                                                                .length > 2 && (
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() =>
-                                                                        removeOption(
-                                                                            index,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <TrashIcon className="size-4" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    ),
-                                                )}
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={addOption}
-                                                >
-                                                    <PlusIcon className="size-4" />
-                                                    Add Option
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {/* True/False */}
-                                        {isTrueFalse && (
-                                            <div className="space-y-2">
-                                                <Label>Correct Answer</Label>
-                                                <div className="flex gap-4">
-                                                    <label className="flex cursor-pointer items-center gap-2">
-                                                        <input
-                                                            type="radio"
-                                                            name="correct_answer"
-                                                            value="true"
-                                                            checked={
-                                                                questionForm
-                                                                    .data
-                                                                    .correct_answer ===
-                                                                'true'
-                                                            }
-                                                            onChange={(e) =>
-                                                                questionForm.setData(
-                                                                    'correct_answer',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            className="size-4"
-                                                        />
-                                                        True
-                                                    </label>
-                                                    <label className="flex cursor-pointer items-center gap-2">
-                                                        <input
-                                                            type="radio"
-                                                            name="correct_answer"
-                                                            value="false"
-                                                            checked={
-                                                                questionForm
-                                                                    .data
-                                                                    .correct_answer ===
-                                                                'false'
-                                                            }
-                                                            onChange={(e) =>
-                                                                questionForm.setData(
-                                                                    'correct_answer',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            className="size-4"
-                                                        />
-                                                        False
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Short text answer */}
-                                        {questionForm.data.type ===
-                                            'short_text' && (
-                                            <div className="space-y-2">
-                                                <Label htmlFor="correct_answer">
-                                                    Correct Answer(s)
-                                                </Label>
-                                                <Input
-                                                    id="correct_answer"
-                                                    value={
-                                                        questionForm.data
-                                                            .correct_answer
-                                                    }
-                                                    onChange={(e) =>
-                                                        questionForm.setData(
-                                                            'correct_answer',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Use | to separate multiple accepted answers"
-                                                />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Example: "Paris | paris"
-                                                    accepts both
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Essay grading notes */}
-                                        {questionForm.data.type === 'essay' && (
-                                            <div className="space-y-2">
-                                                <Label htmlFor="grading_notes">
-                                                    Grading Notes (for
-                                                    instructor)
-                                                </Label>
-                                                <textarea
-                                                    id="grading_notes"
-                                                    value={
-                                                        questionForm.data
-                                                            .grading_notes
-                                                    }
-                                                    onChange={(e) =>
-                                                        questionForm.setData(
-                                                            'grading_notes',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Key points to look for when grading..."
-                                                    className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-2">
-                                            <Button
-                                                type="submit"
-                                                disabled={
-                                                    questionForm.processing
-                                                }
-                                            >
-                                                Add Question
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    setShowQuestionForm(false);
-                                                    questionForm.reset();
-                                                }}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </div>
-                                    </form>
-                                </CardContent>
-                            </Card>
+                        {/* True/False */}
+                        {isTrueFalse && (
+                            <div className="space-y-2">
+                                <Label>{t('exams.questions.correct_answer')}</Label>
+                                <Select 
+                                    value={questionForm.data.correct_answer} 
+                                    onValueChange={(val) => questionForm.setData('correct_answer', val)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="true">{t('exams.questions.correct_answer.true')}</SelectItem>
+                                        <SelectItem value="false">{t('exams.questions.correct_answer.false')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         )}
 
-                        {/* Questions List */}
-                        <div className="space-y-3">
-                            {exam.questions?.map((question, index) => (
-                                <div
-                                    key={question.id}
-                                    className="flex items-start gap-3 rounded-lg border p-4"
-                                >
-                                    <GripVerticalIcon className="mt-1 size-5 cursor-grab text-muted-foreground" />
-                                    <div className="min-w-0 flex-1">
-                                        <div className="mb-1 flex items-center gap-2">
-                                            <span className="font-medium">
-                                                Q{index + 1}.
-                                            </span>
-                                            <Badge
-                                                variant="outline"
-                                                className="text-xs"
-                                            >
-                                                {
-                                                    questionTypes.find(
-                                                        (t) =>
-                                                            t.value ===
-                                                            question.type,
-                                                    )?.label
-                                                }
-                                            </Badge>
-                                            <Badge
-                                                variant="secondary"
-                                                className="text-xs"
-                                            >
-                                                {question.points} pts
-                                            </Badge>
-                                        </div>
-                                        <p className="text-sm">
-                                            {question.content}
-                                        </p>
-                                        {question.options?.length > 0 && (
-                                            <div className="mt-2 space-y-1">
-                                                {question.options.map(
-                                                    (opt, optIndex) => (
-                                                        <div
-                                                            key={opt.id}
-                                                            className={`pl-4 text-sm ${opt.is_correct ? 'font-medium text-green-600' : 'text-muted-foreground'}`}
-                                                        >
-                                                            {String.fromCharCode(
-                                                                65 + optIndex,
-                                                            )}
-                                                            . {opt.content}
-                                                            {opt.is_correct &&
-                                                                ' ✓'}
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() =>
-                                            handleDeleteQuestion(question.id)
-                                        }
-                                    >
-                                        <TrashIcon className="size-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
+                        {/* Short text */}
+                        {questionForm.data.type === 'short_text' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="q-correct">{t('exams.questions.correct_answers')}</Label>
+                                <Input
+                                    id="q-correct"
+                                    value={questionForm.data.correct_answer}
+                                    onChange={(e) => questionForm.setData('correct_answer', e.target.value)}
+                                    placeholder={t('exams.questions.correct_answer.placeholder')}
+                                />
+                            </div>
+                        )}
 
-                            {(!exam.questions || exam.questions.length === 0) &&
-                                !showQuestionForm && (
-                                    <p className="py-8 text-center text-muted-foreground">
-                                        No questions added yet. Click "Add
-                                        Question" to get started.
-                                    </p>
-                                )}
+                        {/* Essay */}
+                        {questionForm.data.type === 'essay' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="q-notes">{t('exams.questions.grading_notes')}</Label>
+                                <Textarea
+                                    id="q-notes"
+                                    value={questionForm.data.grading_notes}
+                                    onChange={(e) => questionForm.setData('grading_notes', e.target.value)}
+                                    placeholder={t('exams.questions.grading_notes.placeholder')}
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 pt-4">
+                            <Button type="submit" className="flex-1" disabled={questionForm.processing}>
+                                {editingQuestion ? t('common.save') : t('exams.questions.add')}
+                            </Button>
+                            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsQuestionSheetOpen(false)}>
+                                {t('common.cancel')}
+                            </Button>
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    </form>
+                </SheetContent>
+            </Sheet>
         </AppLayout>
     );
 }

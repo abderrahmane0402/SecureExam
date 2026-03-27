@@ -155,7 +155,7 @@ class ExamController extends Controller
         // Sync students (this will add new and remove unselected if we use sync)
         $syncData = [];
         foreach ($studentIds as $studentId) {
-            $syncData[(int)$studentId] = ['assigned_at' => now()];
+            $syncData[(int) $studentId] = ['assigned_at' => now()];
         }
 
         \Illuminate\Support\Facades\Log::info('Sync data structure:', $syncData);
@@ -163,9 +163,9 @@ class ExamController extends Controller
         $results = $exam->assignedStudents()->sync($syncData);
 
         \Illuminate\Support\Facades\Log::info('Sync raw results:', $results);
-        return back()->with('success', count($studentIds) . ' students assigned successfully.');
-    }
 
+        return back()->with('success', count($studentIds).' students assigned successfully.');
+    }
 
     /**
      * Show form to assign students.
@@ -200,7 +200,7 @@ class ExamController extends Controller
         $activeAttempts = $exam->attempts()
             ->where('status', 'in_progress')
             ->with(['student', 'violations' => function ($q): void {
-                $q->latest('occurred_at')->limit(5);
+                $q->latest('id')->limit(50);
             }, 'activeSession'])
             ->withCount('answers')
             ->get();
@@ -237,8 +237,8 @@ class ExamController extends Controller
         $recentViolations = ViolationLog::query()
             ->whereHas('attempt', fn ($q) => $q->where('exam_id', $exam->id))
             ->with('attempt.student')
-            ->latest('occurred_at')
-            ->limit(20)
+            ->latest('id')
+            ->limit(100)
             ->get();
 
         $exam->loadCount('questions');
@@ -254,6 +254,9 @@ class ExamController extends Controller
                 'attempt' => [
                     'id' => $a->id,
                     'started_at' => $a->started_at,
+                    'is_paused' => $a->is_paused,
+                    'remaining_time' => $a->remaining_time,
+                    'total_paused_seconds' => $a->total_paused_seconds,
                     'answers_count' => $a->answers_count,
                     'violation_logs' => $a->violations,
                 ],
@@ -411,11 +414,30 @@ class ExamController extends Controller
             abort(404);
         }
 
-        $attempt->update(['is_paused' => ! $attempt->is_paused]);
+        $isPaused = ! $attempt->is_paused;
+        $data = ['is_paused' => $isPaused];
 
-        $status = $attempt->is_paused ? 'paused' : 'resumed';
+        if ($isPaused) {
+            // Starting pause
+            $data['paused_at'] = now();
+        } else {
+            // Resuming from pause
+            if ($attempt->paused_at) {
+                // In this project, older->diffInSeconds(newer) is positive
+                $pauseDuration = $attempt->paused_at->diffInSeconds(now());
+                $data['total_paused_seconds'] = $attempt->total_paused_seconds + $pauseDuration;
+            }
+            $data['paused_at'] = null;
+        }
 
-        broadcast(new ExamAttemptPaused($attempt, $attempt->is_paused))->toOthers();
+        $attempt->update($data);
+
+        $status = $isPaused ? 'paused' : 'resumed';
+
+        // Reload to get fresh remaining_time for broadcast
+        $attempt->refresh();
+
+        broadcast(new ExamAttemptPaused($attempt, $isPaused))->toOthers();
 
         return back()->with('success', "Attempt $status successfully.");
     }
@@ -437,6 +459,28 @@ class ExamController extends Controller
 
         $attempt->increment('extra_time_minutes', $validated['minutes']);
 
+        // Broadcast to student instantly
+        $attempt->refresh();
+        broadcast(new \App\Events\Exam\ExamTimeExtended(
+            $exam->id,
+            $attempt->id,
+            $attempt->remaining_time
+        ))->toOthers();
+
         return back()->with('success', "Extended time by {$validated['minutes']} minutes.");
+    }
+
+    /**
+     * Toggle the show_results flag on the exam.
+     */
+    public function toggleShowResults(Exam $exam): RedirectResponse
+    {
+        Gate::authorize('update', $exam);
+
+        $exam->update(['show_results' => ! $exam->show_results]);
+
+        $status = $exam->show_results ? 'enabled' : 'disabled';
+
+        return back()->with('success', "Question review for students has been $status.");
     }
 }

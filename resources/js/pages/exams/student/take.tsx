@@ -2,10 +2,11 @@ import { Head, router } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import {
     AlertTriangleIcon,
-    ArrowLeftIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
+    ClipboardCheckIcon,
     ClockIcon,
+    FileTextIcon,
     FlagIcon,
     SaveIcon,
     SendIcon,
@@ -13,6 +14,7 @@ import {
     ShieldAlertIcon,
     MailIcon,
     PauseIcon,
+    Loader2Icon,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
@@ -86,7 +88,6 @@ export default function TakeExam({
     const [violationCount, setViolationCount] = useState(
         attempt.violation_count || 0,
     );
-    const [showViolationWarning, setShowViolationWarning] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState(false);
@@ -96,11 +97,8 @@ export default function TakeExam({
         return isAlreadyStarted;
     });
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-    const [lastViolationSeverity, setLastViolationSeverity] = useState<
-        string | null
-    >(null);
     const [isPaused, setIsPaused] = useState(attempt.is_paused);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout|null>(null);
 
     const currentQuestion = questions[currentIndex];
 
@@ -124,44 +122,66 @@ export default function TakeExam({
         returnToExam,
         setSubmitting,
         isLocked,
+        isKicked,
         lockReason,
         reloadCountdown,
-        warningMessage,
-        clearWarning,
         hasEnteredFullscreen,
     } = useExamSecurity({
         attemptId: attempt.id,
         examId: exam.id,
         maxViolations: 5,
         initialViolationCount: attempt.violation_count || 0,
-        onViolation: (type, count, severity) => {
+        onViolation: (type, count) => {
             setViolationCount(count);
-            setLastViolationSeverity(severity);
-            setShowViolationWarning(true);
-            setTimeout(() => {
-                setShowViolationWarning(false);
-                setLastViolationSeverity(null);
-            }, 3000);
+            
+            // Show premium security toast warning
+            toast.error(t(`violation.${type}` as any) || type.replace(/_/g, ' '), {
+                icon: <ShieldAlertIcon className="size-5 text-destructive" />,
+                description: `Security Warning! Attempts: ${count}/5`,
+                duration: 6000,
+            });
         },
         onAutoSubmit: handleAutoSubmit,
+        onPauseStatusChange: (paused) => {
+            if (paused !== isPaused) {
+                setIsPaused(paused);
+                if (paused) {
+                    exitFullscreen();
+                }
+            }
+        },
         enabled: examStarted && !new URLSearchParams(window.location.search).has('no_security'),
+        isPaused: isPaused,
         initialSessionToken: session_token,
     });
 
+    // Sync isPaused with props (for refreshes or Inertia updates)
+    useEffect(() => {
+        if (attempt.is_paused !== isPaused) {
+            setIsPaused(attempt.is_paused);
+            if (attempt.is_paused) {
+                exitFullscreen();
+            }
+        }
+    }, [attempt.is_paused, isPaused, exitFullscreen]);
+
     // Real-time Teacher Broadcast Listener
-    useEcho(`exam-room.${exam.id}`, 'TeacherMessageBroadcast', (e: any) => {
+    useEcho(`exam-room.${exam.id}`, '.TeacherMessageBroadcast', (e: any) => {
         toast.info(e.message, {
             icon: <MailIcon className="size-5 text-blue-600" />,
             description: `From Instructor: ${e.teacher_name}`,
             duration: Infinity, // Keep it until student dismisses it
-            important: true,
         });
     });
 
     // Real-time Pause Listener
-    useEcho(`exam-room.${exam.id}`, 'ExamAttemptPaused', (e: any) => {
-        if (e.attempt_id === attempt.id) {
+    useEcho(`exam-room.${exam.id}`, '.ExamAttemptPaused', (e: any) => {
+        // Use loose equality (==) for ID check to handle string/number mismatch
+        if (e.attempt_id == attempt.id) {
             setIsPaused(e.is_paused);
+            if (e.remaining_time !== undefined) {
+                setTimeRemaining(e.remaining_time);
+            }
             if (e.is_paused) {
                 exitFullscreen();
             } else {
@@ -170,7 +190,20 @@ export default function TakeExam({
                 });
             }
         }
-    });    // Handle starting the exam (requires user gesture for fullscreen)
+    });
+
+    // Real-time Time Extension Listener
+    useEcho(`exam-room.${exam.id}`, '.ExamTimeExtended', (e: any) => {
+        if (e.attempt_id == attempt.id) {
+            setTimeRemaining(e.new_remaining_time);
+            toast.success('Time Extended! 🎁', {
+                description: 'The instructor has granted you extra time for this exam.',
+                icon: <ClockIcon className="size-5 text-emerald-600" />,
+            });
+        }
+    });
+
+    // Handle starting the exam (requires user gesture for fullscreen)
     const handleStartExam = async () => {
         const success = await enterFullscreen();
         setIsFullscreen(success);
@@ -244,6 +277,10 @@ export default function TakeExam({
                 });
 
                 if (!response.ok) {
+                    if (response.status === 403) {
+                        window.location.reload();
+                        return;
+                    }
                     throw new Error('Save failed');
                 }
             } catch (e) {
@@ -263,7 +300,6 @@ export default function TakeExam({
     ) => {
         setAnswers((prev) => ({ ...prev, [questionId]: data }));
 
-        // Debounce save
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
@@ -272,14 +308,12 @@ export default function TakeExam({
         }, 1000);
     };
 
-    // Multiple choice single - select one option
     const handleSingleChoice = (optionId: number) => {
         handleAnswerChange(currentQuestion.id, {
             selected_options: [optionId],
         });
     };
 
-    // Multiple choice multiple - toggle option
     const handleMultipleChoice = (optionId: number, checked: boolean) => {
         const current = answers[currentQuestion.id]?.selected_options || [];
         const updated = checked
@@ -288,17 +322,14 @@ export default function TakeExam({
         handleAnswerChange(currentQuestion.id, { selected_options: updated });
     };
 
-    // True/False
     const handleTrueFalse = (value: string) => {
         handleAnswerChange(currentQuestion.id, { text_answer: value });
     };
 
-    // Text answer
     const handleTextAnswer = (text: string) => {
         handleAnswerChange(currentQuestion.id, { text_answer: text });
     };
 
-    // Toggle flag
     const toggleFlag = (questionId: number) => {
         setFlagged((prev) => {
             const next = new Set(prev);
@@ -311,9 +342,8 @@ export default function TakeExam({
         });
     };
 
-    // Submit exam - show confirmation dialog
     const handleSubmit = () => {
-        setSubmitting(true); // Prevent violations during confirmation
+        setSubmitting(true);
         setShowSubmitConfirm(true);
     };
 
@@ -325,7 +355,7 @@ export default function TakeExam({
 
     const handleCancelSubmit = () => {
         setShowSubmitConfirm(false);
-        setSubmitting(false); // Re-enable violation tracking
+        setSubmitting(false);
     };
 
     const currentAnswer = answers[currentQuestion?.id];
@@ -337,49 +367,73 @@ export default function TakeExam({
         );
     }).length;
 
-    const isLowTime = timeRemaining < 300; // Less than 5 minutes
+    const isLowTime = timeRemaining < 300;
 
-    // Show start screen before exam begins (only if they haven't started this attempt yet)
+    if (isKicked) {
+        return (
+            <>
+                <Head title="Submitting Exam..." />
+                <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
+                    <Loader2Icon className="size-16 animate-spin text-primary mb-6" />
+                    <h1 className="text-3xl font-black mb-2">{t('exam.take.submitting')}...</h1>
+                    <p className="text-slate-400 font-medium">Please wait while your answers are securely saved...</p>
+                </div>
+            </>
+        );
+    }
+
     if (!examStarted && !hasEnteredFullscreen) {
         return (
             <>
                 <Head title={`${t('exam.take.start')}: ${exam.title}`} />
-                <div className="flex min-h-screen items-center justify-center bg-background p-4">
-                    <Card className="w-full max-w-lg">
-                        <CardHeader className="text-center">
-                            <CardTitle className="text-2xl">
+                <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+                    <Card className="w-full max-w-lg shadow-xl border-t-4 border-t-primary">
+                        <CardHeader className="text-center pt-8">
+                            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
+                                <FileTextIcon className="size-8 text-primary" />
+                            </div>
+                            <CardTitle className="text-2xl font-black text-slate-800 tracking-tight">
                                 {exam.title}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-6">
+                        <CardContent className="space-y-8 pb-10">
                             <div className="space-y-4">
-                                <h3 className="font-semibold">
+                                <div className="flex items-center gap-2 font-bold text-slate-900 border-b pb-2">
+                                    <ClipboardCheckIcon className="size-5 text-primary" />
                                     {t('exam.take.beforeYouBegin')}
-                                </h3>
-                                <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                                    <li>{t('exam.take.rule1')}</li>
-                                    <li>{t('exam.take.rule2')}</li>
-                                    <li>{t('exam.take.rule3')}</li>
-                                    <li>{t('exam.take.rule4')}</li>
-                                    <li>
-                                        {t('exam.take.rule5')}{' '}
-                                        {Math.floor(
-                                            attempt.remaining_time / 60,
-                                        )}{' '}
-                                        {t('exam.minutes')}
+                                </div>
+                                <ul className="space-y-4">
+                                    {[1, 2, 3, 4].map((num) => (
+                                        <li key={num} className="flex gap-3 text-sm text-slate-600">
+                                            <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
+                                                {num}
+                                            </div>
+                                            {(t as any)(`exam.take.rule${num}`)}
+                                        </li>
+                                    ))}
+                                    <li className="flex gap-3 text-sm text-slate-600 font-bold border-t pt-4">
+                                        <ClockIcon className="size-5 shrink-0 text-primary" />
+                                        <span>
+                                            {t('exam.take.rule5')} {Math.floor(attempt.remaining_time / 60)} {t('exam.minutes')}
+                                        </span>
                                     </li>
-                                    <li>{t('exam.questions')}: {questions.length}</li>
                                 </ul>
                             </div>
-                            <Button
-                                type="button"
-                                onClick={handleStartExam}
-                                className="w-full"
-                                size="lg"
-                            >
-                                <MaximizeIcon className="mr-2 size-5" />
-                                {t('exam.take.start')}
-                            </Button>
+                            
+                            <div className="pt-2">
+                                <Button
+                                    type="button"
+                                    onClick={handleStartExam}
+                                    className="w-full h-14 text-lg font-bold shadow-lg"
+                                    size="lg"
+                                >
+                                    <MaximizeIcon className="mr-2 size-6" />
+                                    {t('exam.take.start').toUpperCase()}
+                                </Button>
+                                <p className="mt-4 text-center text-[11px] text-slate-400 uppercase font-black tracking-widest">
+                                    Entering Fullscreen Mode
+                                </p>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -387,7 +441,6 @@ export default function TakeExam({
         );
     }
 
-    // Show paused screen if the exam is paused by the instructor
     if (isPaused) {
         return (
             <>
@@ -409,7 +462,6 @@ export default function TakeExam({
         );
     }
 
-    // Show fullscreen enforcement screen if not in fullscreen
     if (!isFullscreen && !new URLSearchParams(window.location.search).has('no_security')) {
         return (
             <>
@@ -459,86 +511,57 @@ export default function TakeExam({
             <div className="flex min-h-screen flex-col bg-background select-none">
                 {/* Blocking Overlay - shown when exam is locked */}
                 {isLocked && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm">
-                        <Card className="mx-4 w-full max-w-md">
-                            <CardHeader className="text-center">
-                                <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-red-100">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
+                        <Card className="w-full max-w-lg border-red-500/50 shadow-2xl">
+                            <CardHeader className="text-center pb-2">
+                                <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-red-100 ring-8 ring-red-50">
                                     <ShieldAlertIcon className="size-8 text-red-600" />
                                 </div>
-                                <CardTitle className="text-xl text-red-600">
-                                    {t('exam.take.locked')}
+                                <CardTitle className="text-2xl font-black text-red-600 uppercase tracking-tight">
+                                    {t('exam.take.locked').toUpperCase()}
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4 text-center">
-                                <p className="text-muted-foreground">
-                                    {lockReason}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    {t('exam.take.lockedReason')}
-                                </p>
+                            <CardContent className="space-y-6">
+                                <div className="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                                    <h3 className="text-sm font-bold flex items-center gap-2 mb-3 text-slate-700">
+                                        <AlertTriangleIcon className="size-4 text-amber-500" />
+                                        {t('exam.take.beforeYouBegin')}
+                                    </h3>
+                                    <ul className="list-disc space-y-2 pl-5 text-sm text-slate-600">
+                                        <li>{t('exam.take.rule1')}</li>
+                                        <li>{t('exam.take.rule2')}</li>
+                                        <li>{t('exam.take.rule3')}</li>
+                                        <li>{t('exam.take.rule4')}</li>
+                                    </ul>
+                                </div>
+
                                 {reloadCountdown !== null && (
-                                    <div className="rounded-md bg-red-50 p-3 text-red-700">
-                                        <p className="font-medium animate-pulse">
-                                            {t('exam.take.returnWithin', [reloadCountdown])}
+                                    <div className="rounded-xl bg-red-600 p-4 text-white text-center shadow-lg animate-pulse border-2 border-red-400">
+                                        <p className="text-xs uppercase font-black tracking-widest opacity-80 mb-1">
+                                            Security Submission Imminent
+                                        </p>
+                                        <p className="text-xl font-black">
+                                            {t('exam.take.returnWithin', [reloadCountdown]).toUpperCase()}
                                         </p>
                                     </div>
                                 )}
-                                <div className="pt-2">
+
+                                <div className="space-y-3 pt-2">
                                     <Button
                                         onClick={returnToExam}
-                                        className="w-full"
+                                        className="w-full h-14 text-lg font-bold shadow-lg"
                                         size="lg"
+                                        variant="destructive"
                                     >
-                                        <ArrowLeftIcon className="mr-2 size-5" />
-                                        {t('exam.take.return')}
+                                        <MaximizeIcon className="mr-2 size-6" />
+                                        {t('exam.take.return').toUpperCase()}
                                     </Button>
+                                    <p className="text-center text-xs text-slate-500 font-medium">
+                                        {lockReason}
+                                    </p>
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-                )}
-
-                {/* Warning Message Toast - shown after returning from long absence */}
-                {warningMessage && (
-                    <div className="fixed bottom-4 left-4 z-[101] animate-in slide-in-from-bottom-2">
-                        <div className="flex max-w-lg items-center gap-3 rounded-lg bg-amber-600 px-6 py-4 text-white shadow-lg">
-                            <AlertTriangleIcon className="size-6 shrink-0" />
-                            <div className="flex-1">
-                                <p className="font-medium">Warning</p>
-                                <p className="text-sm text-amber-100">
-                                    {warningMessage}
-                                </p>
-                            </div>
-                            <button
-                                onClick={clearWarning}
-                                className="shrink-0 rounded p-1 hover:bg-amber-700"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Violation Warning Toast */}
-                {showViolationWarning && !warningMessage && (
-                    <div className="fixed bottom-4 left-4 z-50 animate-in slide-in-from-bottom-2">
-                        <div
-                            className={`flex items-center gap-2 rounded-lg px-6 py-3 text-white shadow-lg ${
-                                lastViolationSeverity === 'critical'
-                                    ? 'bg-red-700'
-                                    : lastViolationSeverity === 'high'
-                                      ? 'bg-red-600'
-                                      : lastViolationSeverity === 'medium'
-                                        ? 'bg-orange-600'
-                                        : 'bg-yellow-600'
-                            }`}
-                        >
-                            <AlertTriangleIcon className="size-5" />
-                            <span>
-                                {t('exam.securityViolation')} ({violationCount}
-                                /5)
-                            </span>
-                        </div>
                     </div>
                 )}
 
