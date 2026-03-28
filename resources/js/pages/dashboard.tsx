@@ -43,11 +43,11 @@ export default function Dashboard() {
             <Head title={t('common.dashboard')} />
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Welcome Section */}
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white shadow-lg">
+                <div className="rounded-xl bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground shadow-lg">
                     <h1 className="text-2xl font-bold">
                         {t('dashboard.welcome')}, {auth.user.name}!
                     </h1>
-                    <p className="mt-1 text-blue-100">
+                    <p className="mt-1 opacity-90">
                         {isInstructor
                             ? t('dashboard.instructor.subtitle')
                             : t('dashboard.student.subtitle')}
@@ -66,10 +66,10 @@ function InstructorDashboard({ t }: { t: TFunction }) {
             {/* Quick Actions - Fixed height cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Link href="/exams/create" className="group">
-                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-blue-200 hover:shadow-lg dark:hover:border-blue-900">
+                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-3 rounded-full bg-blue-100 p-3 transition-transform group-hover:scale-110 dark:bg-blue-900/50">
-                                <PlusCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
+                                <PlusCircle className="h-6 w-6 text-primary" />
                             </div>
                             <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.createExam')}
@@ -82,10 +82,10 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                 </Link>
 
                 <Link href="/exams" className="group">
-                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-green-200 hover:shadow-lg dark:hover:border-green-900">
+                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-amber-500/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-3 rounded-full bg-green-100 p-3 transition-transform group-hover:scale-110 dark:bg-green-900/50">
-                                <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            <div className="mb-3 rounded-full bg-emerald-500/10 p-3 transition-transform group-hover:scale-110">
+                                <BookOpen className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.myExams')}
@@ -98,10 +98,10 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                 </Link>
 
                 <Link href="/exams" className="group">
-                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-purple-200 hover:shadow-lg dark:hover:border-purple-900">
+                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-3 rounded-full bg-purple-100 p-3 transition-transform group-hover:scale-110 dark:bg-purple-900/50">
-                                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
+                                <Users className="h-6 w-6 text-primary" />
                             </div>
                             <CardTitle className="text-base font-black uppercase tracking-tight">{t('dashboard.monitor')}</CardTitle>
                             <CardDescription className="mt-1 text-xs font-bold">
@@ -112,10 +112,10 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                 </Link>
 
                 <Link href="/exams" className="group">
-                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-orange-200 hover:shadow-lg dark:hover:border-orange-900">
+                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-amber-500/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-3 rounded-full bg-orange-100 p-3 transition-transform group-hover:scale-110 dark:bg-orange-900/50">
-                                <BarChart3 className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                            <div className="mb-3 rounded-full bg-amber-500/10 p-3 transition-transform group-hover:scale-110">
+                                <BarChart3 className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                             </div>
                             <CardTitle className="text-base font-black uppercase tracking-tight">{t('dashboard.grading')}</CardTitle>
                             <CardDescription className="mt-1 text-xs font-bold">
@@ -131,8 +131,8 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                 <Card className="flex flex-col">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2">
-                            <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/50">
-                                <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <div className="rounded-lg bg-primary/10 p-2">
+                                <Clock className="h-4 w-4 text-primary" />
                             </div>
                             {t('dashboard.gettingStarted')}
                         </CardTitle>
@@ -168,7 +168,7 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                                     key={item.step}
                                     className="flex items-start gap-3"
                                 >
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-xs font-bold text-white shadow-sm">
+                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">
                                         {item.step}
                                     </div>
                                     <div className="flex-1">
@@ -197,8 +197,8 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                 <Card className="flex flex-col">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2">
-                            <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/50">
-                                <Lightbulb className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <div className="rounded-lg bg-emerald-500/10 p-2">
+                                <Lightbulb className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             {t('dashboard.quickTips')}
                         </CardTitle>
@@ -242,10 +242,10 @@ function StudentDashboard({ t }: { t: TFunction }) {
             {/* Quick Actions - Fixed height cards */}
             <div className="grid gap-4 sm:grid-cols-3">
                 <Link href="/student/exams" className="group">
-                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-green-200 hover:shadow-lg dark:hover:border-green-900">
+                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-amber-500/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-3 rounded-full bg-green-100 p-3 transition-transform group-hover:scale-110 dark:bg-green-900/50">
-                                <Play className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            <div className="mb-3 rounded-full bg-emerald-500/10 p-3 transition-transform group-hover:scale-110">
+                                <Play className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.availableExams')}
@@ -258,10 +258,10 @@ function StudentDashboard({ t }: { t: TFunction }) {
                 </Link>
 
                 <Link href="/student/exams" className="group">
-                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-blue-200 hover:shadow-lg dark:hover:border-blue-900">
+                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-3 rounded-full bg-blue-100 p-3 transition-transform group-hover:scale-110 dark:bg-blue-900/50">
-                                <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
+                                <Clock className="h-6 w-6 text-primary" />
                             </div>
                             <CardTitle className="text-base font-black uppercase tracking-tight">
                                 {t('dashboard.inProgress')}
@@ -274,10 +274,10 @@ function StudentDashboard({ t }: { t: TFunction }) {
                 </Link>
 
                 <Link href="/student/results" className="group">
-                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-transparent transition-all hover:border-purple-200 hover:shadow-lg dark:hover:border-purple-900">
+                    <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-3 rounded-full bg-purple-100 p-3 transition-transform group-hover:scale-110 dark:bg-purple-900/50">
-                                <Trophy className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
+                                <Trophy className="h-6 w-6 text-primary" />
                             </div>
                             <CardTitle className="text-base font-black uppercase tracking-tight">{t('dashboard.results')}</CardTitle>
                             <CardDescription className="mt-1 text-xs font-bold">
@@ -293,8 +293,8 @@ function StudentDashboard({ t }: { t: TFunction }) {
                 <Card className="flex flex-col">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2">
-                            <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/50">
-                                <GraduationCap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <div className="rounded-lg bg-primary/10 p-2">
+                                <GraduationCap className="h-4 w-4 text-primary" />
                             </div>
                             {t('dashboard.howToTake')}
                         </CardTitle>
@@ -330,7 +330,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                                     key={item.step}
                                     className="flex items-start gap-3"
                                 >
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-xs font-bold text-white shadow-sm">
+                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">
                                         {item.step}
                                     </div>
                                     <div className="flex-1">
@@ -356,10 +356,10 @@ function StudentDashboard({ t }: { t: TFunction }) {
                     </div>
                 </Card>
 
-                <Card className="flex flex-col border-amber-200 dark:border-amber-900/50">
+                <Card className="flex flex-col border-amber-500/20">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                            <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/50">
+                            <div className="rounded-lg bg-amber-500/10 p-2">
                                 <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                             </div>
                             {t('dashboard.importantRules')}
@@ -381,7 +381,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                                 ].map((rule, i) => (
                                     <div
                                         key={i}
-                                        className="flex items-start gap-3 rounded-lg bg-amber-50 p-3 dark:bg-amber-900/20"
+                                        className="flex items-start gap-3 rounded-lg bg-amber-500/5 p-3 transition-colors hover:bg-amber-500/10"
                                     >
                                         <span className="text-lg">
                                             {rule.icon}
@@ -393,7 +393,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                         </ScrollArea>
                     </CardContent>
                     <div className="p-6 pt-0">
-                        <div className="flex items-center gap-2 rounded-lg bg-amber-100 p-3 dark:bg-amber-900/30">
+                        <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 p-3">
                             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                             <p className="text-sm font-black uppercase tracking-tight text-amber-700 dark:text-amber-300">
                                 {t('dashboard.violationWarning')}

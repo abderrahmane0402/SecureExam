@@ -9,7 +9,7 @@ export default function Heading({
 }) {
     if (variant === 'gradient') {
         return (
-            <header className="mb-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <header className="mb-6 rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-white shadow-lg">
                 <h2 className="text-2xl font-bold">{title}</h2>
                 {description && (
                     <p className="mt-1 opacity-90">{description}</p>

@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     PlusIcon,
     PencilIcon,
@@ -6,6 +6,8 @@ import {
     UsersIcon,
     MonitorIcon,
     EyeIcon,
+    FileIcon,
+    ActivityIcon,
     SearchIcon,
     MoreVerticalIcon,
 } from 'lucide-react';
@@ -111,45 +113,51 @@ export default function ExamIndex({ exams }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('exams.title')} />
             <div className="flex flex-col gap-6 p-6">
-                <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <div>
-                        <h1 className="text-2xl font-bold">{t('exams.title')}</h1>
-                        <p className="mt-1 opacity-90">{t('exams.subtitle')}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500 dark:from-primary/20 dark:via-primary/10 dark:to-background p-8 text-white shadow-2xl shadow-blue-500/10 border border-white/10 relative overflow-hidden">
+                    <div className="relative z-10">
+                        <h1 className="text-3xl font-black tracking-tight">{t('exams.title')}</h1>
+                        <p className="mt-1.5 text-blue-100/80 font-medium italic">{t('exams.subtitle')}</p>
                     </div>
-                    <Button
-                        asChild
-                        variant="secondary"
-                        className="bg-white/20 text-white hover:bg-white/30"
-                    >
-                        <Link href="/exams/create">
-                            <PlusIcon className="size-4" />
-                            {t('exams.create')}
-                        </Link>
-                    </Button>
+                    <div className="relative z-10 flex shrink-0 gap-3">
+                        <Button
+                            asChild
+                            variant="secondary"
+                            className="bg-white/20 text-white hover:bg-white/30 border-white/20 backdrop-blur-md font-bold"
+                        >
+                            <Link href="/exams/create">
+                                <PlusIcon className="size-4 mr-2" />
+                                {t('exams.create')}
+                            </Link>
+                        </Button>
+                    </div>
+                    <div className="absolute top-0 right-0 size-64 bg-white/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                 </div>
 
-                <div className="relative">
-                    <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <div className="relative group max-w-2xl mx-auto w-full transition-all duration-300">
+                    <SearchIcon className="absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground group-hover:text-primary transition-colors" />
                     <Input
                         placeholder={t('exams.search.placeholder')}
-                        className="pl-9"
+                        className="pl-12 h-14 rounded-xl border-border bg-card shadow-lg focus-visible:ring-primary text-foreground transition-all font-medium text-lg"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
 
                 {filteredExams.length === 0 ? (
-                    <Card>
-                        <CardContent className="flex flex-col items-center justify-center py-12">
-                            <p className="mb-4 text-muted-foreground">
+                    <Card className="rounded-3xl border border-border shadow-xl overflow-hidden bg-card/40 backdrop-blur-md">
+                        <CardContent className="flex flex-col items-center justify-center py-24">
+                            <div className="mx-auto flex size-24 items-center justify-center rounded-2xl bg-muted shadow-2xl ring-1 ring-border transition-transform group-hover:scale-110 duration-500 mb-6">
+                                <SearchIcon className="size-10 text-muted-foreground opacity-20" />
+                            </div>
+                            <p className="mb-4 text-muted-foreground font-black uppercase tracking-widest text-sm italic text-center">
                                 {searchQuery
                                     ? t('common.noResults')
                                     : t('exams.empty')}
                             </p>
                             {!searchQuery && (
-                                <Button asChild>
+                                <Button asChild className="rounded-xl h-12 px-10 font-black uppercase tracking-widest text-[11px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95">
                                     <Link href="/exams/create">
-                                        <PlusIcon className="size-4" />
+                                        <PlusIcon className="size-4 mr-2" />
                                         {t('exams.createFirst')}
                                     </Link>
                                 </Button>
@@ -157,33 +165,34 @@ export default function ExamIndex({ exams }: Props) {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {filteredExams.map((exam) => {
                             const live = isExamLive(exam);
                             return (
-                                <Card
+                                 <Card
                                     key={exam.id}
                                     className={cn(
-                                        'flex h-full min-h-[320px] flex-col transition-all',
+                                        'flex h-full min-h-[340px] flex-col transition-all duration-500 rounded-3xl border border-border group bg-card/40 backdrop-blur-md hover:shadow-2xl hover:border-primary/50 hover:-translate-y-2',
                                         live &&
-                                            'ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-neutral-950',
+                                        'ring-4 ring-emerald-500/20 border-emerald-500/50 shadow-emerald-500/10',
                                     )}
                                 >
-                                    <CardHeader className="pb-3">
+                                    <CardHeader className="pb-3 px-8 pt-8">
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0 flex-1">
-                                                <CardTitle className="truncate text-lg">
+                                                <CardTitle className="truncate text-xl font-black tracking-tight text-foreground uppercase">
                                                     {exam.title}
                                                 </CardTitle>
-                                                <CardDescription className="mt-1 line-clamp-2 h-10">
+                                                <CardDescription className="mt-1 line-clamp-2 h-10 text-muted-foreground italic font-medium text-xs leading-relaxed">
                                                     {exam.description ||
                                                         'No description'}
                                                 </CardDescription>
                                             </div>
                                             <div className="flex flex-col items-end gap-1.5">
                                                 {live && (
-                                                    <Badge className="bg-emerald-500 hover:bg-emerald-600">
-                                                        {t('exams.status.live')}
+                                                    <Badge className="bg-emerald-500 hover:bg-emerald-600 font-bold px-2 sm:px-3">
+                                                        <ActivityIcon className="size-3 sm:mr-1.5" />
+                                                        <span className="hidden sm:inline">{t('exams.status.live')}</span>
                                                     </Badge>
                                                 )}
                                                 <Badge
@@ -192,81 +201,78 @@ export default function ExamIndex({ exams }: Props) {
                                                             ? 'default'
                                                             : 'secondary'
                                                     }
-                                                    className="shrink-0"
+                                                    className={cn("shrink-0 font-bold px-2 sm:px-3", !exam.is_published && "bg-muted text-muted-foreground")}
                                                 >
-                                                    {exam.is_published
-                                                        ? t(
-                                                              'exams.status.published',
-                                                          )
-                                                        : t(
-                                                              'exams.status.draft',
-                                                          )}
+                                                    {exam.is_published ? (
+                                                        <>
+                                                            <EyeIcon className="size-3 sm:mr-1.5" />
+                                                            <span className="hidden sm:inline">{t('exams.status.published')}</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <FileIcon className="size-3 sm:mr-1.5" />
+                                                            <span className="hidden sm:inline">{t('exams.status.draft')}</span>
+                                                        </>
+                                                    )}
                                                 </Badge>
                                             </div>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="flex flex-1 flex-col">
-                                        <div className="flex-1 space-y-3">
-                                            <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/50 p-3 text-sm">
+                                    <CardContent className="flex flex-1 flex-col pt-0 px-8 pb-8">
+                                        <div className="flex-1 space-y-4">
+                                             <div className="grid grid-cols-3 gap-2 rounded-2xl bg-muted/50 p-5 border border-border transition-all group-hover:bg-primary/[0.05] group-hover:border-primary/20 shadow-inner">
                                                 <div className="text-center">
-                                                    <p className="text-xs text-muted-foreground">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">
                                                         {t('exams.questions')}
                                                     </p>
-                                                    <p className="text-lg font-semibold">
+                                                    <p className="text-2xl font-black text-foreground tabular-nums tracking-tighter italic">
                                                         {exam.questions_count}
                                                     </p>
                                                 </div>
-                                                <div className="text-center">
-                                                    <p className="text-xs text-muted-foreground">
+                                                <div className="text-center border-x border-border">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">
                                                         {t('exams.students')}
                                                     </p>
-                                                    <p className="text-lg font-semibold">
+                                                    <p className="text-2xl font-black text-foreground tabular-nums tracking-tighter italic">
                                                         {exam.assignments_count}
                                                     </p>
                                                 </div>
                                                 <div className="text-center">
-                                                    <p className="text-xs text-muted-foreground">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">
                                                         {t('exams.attempts')}
                                                     </p>
-                                                    <p className="text-lg font-semibold">
+                                                    <p className="text-2xl font-black text-foreground tabular-nums tracking-tighter italic">
                                                         {exam.attempts_count}
                                                     </p>
                                                 </div>
                                             </div>
-
-                                            <div className="space-y-1 text-sm text-muted-foreground">
-                                                <p>
-                                                    <span className="font-medium text-foreground">
-                                                        {t('exams.duration')}:
-                                                    </span>{' '}
-                                                    {exam.duration_minutes} min
-                                                </p>
-                                                <p>
-                                                    <span className="font-medium text-foreground">
-                                                        {t('exams.start')}:
-                                                    </span>{' '}
-                                                    {formatDate(exam.start_time)}
-                                                </p>
-                                                <p>
-                                                    <span className="font-medium text-foreground">
-                                                        {t('exams.end')}:
-                                                    </span>{' '}
-                                                    {formatDate(exam.end_time)}
-                                                </p>
+                                            <div className="space-y-2 py-2 px-1">
+                                                <div className="flex items-center justify-between text-[10px] font-bold">
+                                                    <span className="text-muted-foreground uppercase tracking-widest">{t('exams.duration')}</span>
+                                                    <span className="text-foreground tabular-nums bg-muted/50 px-2 py-0.5 rounded-lg">{exam.duration_minutes} min</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-[10px] font-bold">
+                                                    <span className="text-muted-foreground uppercase tracking-widest">{t('exams.start')}</span>
+                                                    <span className="text-foreground tabular-nums bg-muted/50 px-2 py-0.5 rounded-lg">{formatDate(exam.start_time)}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-[10px] font-bold">
+                                                    <span className="text-muted-foreground uppercase tracking-widest">{t('exams.end')}</span>
+                                                    <span className="text-foreground tabular-nums bg-muted/50 px-2 py-0.5 rounded-lg">{formatDate(exam.end_time)}</span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="mt-4 flex items-center justify-between border-t pt-4">
+                                        <div className="mt-6 flex items-center justify-between border-t border-border pt-6">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="flex-1"
+                                                className="flex-1 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl border-border hover:bg-accent transition-all shadow-sm"
                                                 asChild
                                             >
                                                 <Link
                                                     href={`/exams/${exam.id}`}
                                                 >
-                                                    <EyeIcon className="mr-2 size-4" />
+                                                    <EyeIcon className="mr-2 size-4 text-primary" />
                                                     {t('exams.card.view')}
                                                 </Link>
                                             </Button>
@@ -276,13 +282,13 @@ export default function ExamIndex({ exams }: Props) {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="ml-2 h-8 w-8 p-0"
+                                                        className="ml-3 h-10 w-10 rounded-xl hover:bg-accent transition-colors"
                                                     >
-                                                        <MoreVerticalIcon className="size-4" />
+                                                        <MoreVerticalIcon className="size-5 text-muted-foreground" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
+                                                <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-2xl border-border bg-popover">
+                                                    <DropdownMenuItem asChild className="rounded-xl font-bold py-2.5 focus:bg-accent">
                                                         <Link
                                                             href={`/exams/${exam.id}/edit`}
                                                         >
@@ -292,7 +298,7 @@ export default function ExamIndex({ exams }: Props) {
                                                             )}
                                                         </Link>
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
+                                                    <DropdownMenuItem asChild className="rounded-xl font-bold py-2.5 focus:bg-accent">
                                                         <Link
                                                             href={`/exams/${exam.id}/assign`}
                                                         >
@@ -302,7 +308,7 @@ export default function ExamIndex({ exams }: Props) {
                                                             )}
                                                         </Link>
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
+                                                    <DropdownMenuItem asChild className="rounded-xl font-bold py-2.5 focus:bg-accent">
                                                         <Link
                                                             href={`/exams/${exam.id}/monitor`}
                                                         >
@@ -318,7 +324,7 @@ export default function ExamIndex({ exams }: Props) {
                                                                 exam.id,
                                                             )
                                                         }
-                                                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                                        className="rounded-xl font-bold py-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive"
                                                     >
                                                         <TrashIcon className="mr-2 size-4" />
                                                         {t('exams.card.delete')}

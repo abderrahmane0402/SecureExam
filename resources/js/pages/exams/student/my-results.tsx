@@ -61,7 +61,7 @@ export default function MyResults({ attempts = [] }: Props) {
                                     <ArrowLeftIcon className="size-5" />
                                 </Link>
                             </Button>
-                            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50 uppercase">
+                            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-foreground uppercase">
                                 {t('student.results.title')}
                             </h1>
                         </div>
@@ -74,7 +74,7 @@ export default function MyResults({ attempts = [] }: Props) {
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input 
                             placeholder={t('common.search')} 
-                            className="pl-9 bg-white/50 backdrop-blur-sm border-slate-200 rounded-xl font-medium"
+                            className="pl-9 bg-white/50 backdrop-blur-sm border-border rounded-xl font-medium"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
@@ -87,7 +87,7 @@ export default function MyResults({ attempts = [] }: Props) {
                             const passed = attempt.percentage >= (attempt.exam.passing_score ?? 0);
                             
                             return (
-                                <Card key={attempt.id} className="group overflow-hidden border-slate-200 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300">
+                                <Card key={attempt.id} className="group overflow-hidden border-border hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300">
                                     <CardContent className="p-0">
                                         <div className="flex items-center p-6 gap-6">
                                             {/* Score Circle */}
@@ -102,7 +102,7 @@ export default function MyResults({ attempts = [] }: Props) {
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-50 truncate">
+                                                    <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-foreground truncate">
                                                         {attempt.exam.title}
                                                     </h3>
                                                     <Badge variant={passed ? "default" : "destructive"} className={cn(
@@ -138,10 +138,10 @@ export default function MyResults({ attempts = [] }: Props) {
                             );
                         })
                     ) : (
-                        <Card className="border-dashed border-2 bg-slate-50/50">
+                        <Card className="border-dashed border-2 bg-muted/50">
                             <CardContent className="py-20 text-center">
-                                <TrophyIcon className="size-16 text-slate-200 mx-auto mb-4" />
-                                <p className="text-slate-500 font-black uppercase tracking-widest">
+                                <TrophyIcon className="size-16 text-muted mx-auto mb-4" />
+                                <p className="text-muted-foreground font-black uppercase tracking-widest">
                                     {search ? t('common.noResults') : t('student.results.none')}
                                 </p>
                             </CardContent>

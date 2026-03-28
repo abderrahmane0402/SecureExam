@@ -53,7 +53,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
             <Head title={`Results: ${exam.title}`} />
             <div className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
                 {/* Header */}
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-center text-white">
+                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-center text-white">
                     <h1 className="text-2xl font-bold">{exam.title}</h1>
                     <div className="mt-4 flex items-center justify-center gap-4">
                         <div className="text-center">
@@ -70,7 +70,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                 variant="secondary"
                                 className={
                                     passed
-                                        ? 'bg-green-500/20 text-green-100'
+                                        ? 'bg-emerald-500/20 text-emerald-100'
                                         : 'bg-red-500/20 text-red-100'
                                 }
                             >
@@ -196,7 +196,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                         key={question.id}
                                         className={`rounded-lg border p-4 ${
                                             isCorrect === true
-                                                ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20'
+                                                ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20'
                                                 : isCorrect === false
                                                   ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20'
                                                   : ''
@@ -206,7 +206,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                             <span
                                                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-white ${
                                                     isCorrect === true
-                                                        ? 'bg-green-500'
+                                                        ? 'bg-emerald-500'
                                                         : isCorrect === false
                                                           ? 'bg-red-500'
                                                           : 'bg-muted-foreground'
@@ -266,7 +266,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                                                         }
                                                                         className={`rounded p-2 text-sm ${
                                                                             isCorrectOption
-                                                                                ? 'bg-green-100 dark:bg-green-900/30'
+                                                                                ? 'bg-emerald-100 dark:bg-emerald-900/30'
                                                                                 : wasSelected
                                                                                   ? 'bg-red-100 dark:bg-red-900/30'
                                                                                   : ''
@@ -284,7 +284,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                                                                 option.content
                                                                             }
                                                                             {isCorrectOption && (
-                                                                                <CheckCircleIcon className="size-4 text-green-500" />
+                                                                                <CheckCircleIcon className="size-4 text-emerald-500" />
                                                                             )}
                                                                         </span>
                                                                     </div>
@@ -302,7 +302,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                                             {answer?.text_answer ||
                                                                 'Not answered'}
                                                         </p>
-                                                        <p className="text-green-600">
+                                                        <p className="text-emerald-600">
                                                             <strong>
                                                                 Correct answer:
                                                             </strong>{' '}

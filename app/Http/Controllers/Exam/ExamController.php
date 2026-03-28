@@ -124,19 +124,10 @@ class ExamController extends Controller
             ->with('success', 'Exam deleted successfully.');
     }
 
-    /**
-     * Assign students to the exam.
-     */
     public function assignStudents(AssignStudentsRequest $request, Exam $exam): RedirectResponse
     {
         $validated = $request->validated();
         $studentIds = $validated['student_ids'] ?? [];
-
-        \Illuminate\Support\Facades\Log::info('Assigning students:', [
-            'exam_id' => $exam->id,
-            'request_student_ids' => $studentIds,
-            'request_emails' => $validated['emails'] ?? null,
-        ]);
 
         // Handle bulk emails if provided
         if (! empty($validated['emails'])) {
@@ -150,19 +141,13 @@ class ExamController extends Controller
             $studentIds = array_unique(array_merge($studentIds, $matchedIds));
         }
 
-        \Illuminate\Support\Facades\Log::info('Final student IDs to sync:', $studentIds);
-
         // Sync students (this will add new and remove unselected if we use sync)
         $syncData = [];
         foreach ($studentIds as $studentId) {
             $syncData[(int) $studentId] = ['assigned_at' => now()];
         }
 
-        \Illuminate\Support\Facades\Log::info('Sync data structure:', $syncData);
-
-        $results = $exam->assignedStudents()->sync($syncData);
-
-        \Illuminate\Support\Facades\Log::info('Sync raw results:', $results);
+        $exam->assignedStudents()->sync($syncData);
 
         return back()->with('success', count($studentIds).' students assigned successfully.');
     }
@@ -468,6 +453,34 @@ class ExamController extends Controller
         ))->toOthers();
 
         return back()->with('success', "Extended time by {$validated['minutes']} minutes.");
+    }
+
+    /**
+     * Extend time for all active attempts of an exam.
+     */
+    public function extendTimeForAll(Request $request, Exam $exam): RedirectResponse
+    {
+        Gate::authorize('update', $exam);
+
+        $validated = $request->validate([
+            'minutes' => ['required', 'integer', 'min:1', 'max:60'],
+        ]);
+
+        $activeAttempts = $exam->attempts()->where('status', 'in_progress')->get();
+
+        foreach ($activeAttempts as $attempt) {
+            $attempt->increment('extra_time_minutes', $validated['minutes']);
+            
+            // Broadcast to each student
+            $attempt->refresh();
+            broadcast(new \App\Events\Exam\ExamTimeExtended(
+                $exam->id,
+                $attempt->id,
+                $attempt->remaining_time
+            ))->toOthers();
+        }
+
+        return back()->with('success', "Extended time by {$validated['minutes']} minutes for all active students.");
     }
 
     /**

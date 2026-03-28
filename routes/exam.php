@@ -55,6 +55,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('exams.attempts.toggle-pause');
         Route::post('exams/{exam}/attempts/{attempt}/extend-time', [ExamController::class, 'extendTime'])
             ->name('exams.attempts.extend-time');
+        Route::post('exams/{exam}/attempts/extend-time-all', [ExamController::class, 'extendTimeForAll'])
+            ->name('exams.attempts.extend-time-all');
         Route::post('exams/{exam}/broadcast', [ExamController::class, 'broadcastMessage'])
             ->name('exams.broadcast');
 

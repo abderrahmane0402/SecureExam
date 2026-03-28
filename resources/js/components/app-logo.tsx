@@ -3,7 +3,7 @@ import { BookOpen } from 'lucide-react';
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-indigo-600">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-gradient-to-br from-blue-700 to-blue-500 shadow-md">
                 <BookOpen className="size-5 text-white" />
             </div>
             <div className="ml-1 grid flex-1 text-left text-sm">

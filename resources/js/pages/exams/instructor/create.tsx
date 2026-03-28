@@ -55,23 +55,26 @@ export default function CreateExam() {
             <Head title={t('exams.create.title')} />
             <div className="mx-auto max-w-3xl space-y-6 p-6">
                 {/* Header */}
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <h1 className="text-2xl font-bold">{t('exams.create.title')}</h1>
-                    <p className="mt-1 opacity-90">{t('exams.create.subtitle')}</p>
+                <div className="rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500 dark:from-blue-900 dark:via-blue-950 dark:to-background p-8 text-white shadow-xl shadow-blue-500/10 border border-white/20 relative overflow-hidden">
+                    <div className="relative z-10">
+                        <h1 className="text-3xl font-black tracking-tight">{t('exams.create.title')}</h1>
+                        <p className="mt-2 text-blue-100/90 font-medium italic">{t('exams.create.subtitle')}</p>
+                    </div>
+                    <div className="absolute top-0 right-0 size-64 bg-white/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t('exams.details')}</CardTitle>
-                        <CardDescription>
+                <Card className="rounded-3xl border border-border bg-white dark:bg-card shadow-sm overflow-hidden">
+                    <CardHeader className="p-8 pb-6 bg-muted/50 border-b border-border">
+                        <CardTitle className="text-2xl font-black tracking-tight text-foreground uppercase">{t('exams.details')}</CardTitle>
+                        <CardDescription className="text-muted-foreground font-medium mt-1 italic">
                             {t('exams.details.description')}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-8 sm:p-10">
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="title">{t('exams.fields.title')} *</Label>
+                            <div className="grid gap-6 md:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{t('exams.fields.title')} *</Label>
                                     <Input
                                         id="title"
                                         value={data.title}
@@ -79,22 +82,23 @@ export default function CreateExam() {
                                             setData('title', e.target.value)
                                         }
                                         placeholder={t('exams.fields.title.placeholder')}
+                                        className="h-12 rounded-xl bg-background border-border focus:ring-primary font-bold text-foreground placeholder:text-muted-foreground/40"
                                     />
                                     <InputError message={errors.title} />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="type">{t('exams.fields.type')} *</Label>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="type" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{t('exams.fields.type')} *</Label>
                                     <Select
                                         value={data.type}
                                         onValueChange={(value) =>
                                             setData('type', value)
                                         }
                                     >
-                                        <SelectTrigger id="type">
+                                        <SelectTrigger id="type" className="h-12 rounded-xl bg-background border-border focus:ring-primary font-bold text-foreground">
                                             <SelectValue placeholder={t('exams.fields.type.placeholder')} />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="bg-popover border-border">
                                             <SelectItem value="auto">
                                                 {t('exams.fields.type.auto')}
                                             </SelectItem>
@@ -107,8 +111,8 @@ export default function CreateExam() {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="description">{t('exams.fields.description')}</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{t('exams.fields.description')}</Label>
                                 <Textarea
                                     id="description"
                                     value={data.description}
@@ -116,13 +120,14 @@ export default function CreateExam() {
                                         setData('description', e.target.value)
                                     }
                                     placeholder={t('exams.fields.description.placeholder')}
+                                    className="min-h-[120px] rounded-xl bg-background border-border focus:ring-primary font-medium text-foreground placeholder:text-muted-foreground/40"
                                 />
                                 <InputError message={errors.description} />
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="duration">
+                            <div className="grid gap-6 md:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="duration" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
                                         {t('exams.fields.duration')} *
                                     </Label>
                                     <Input
@@ -137,14 +142,15 @@ export default function CreateExam() {
                                                 parseInt(e.target.value) || 60,
                                             )
                                         }
+                                        className="h-12 rounded-xl bg-background border-border focus:ring-primary font-bold text-foreground"
                                     />
                                     <InputError
                                         message={errors.duration_minutes}
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="attempts">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="attempts" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
                                         {t('exams.fields.attempts')} *
                                     </Label>
                                     <Input
@@ -159,6 +165,7 @@ export default function CreateExam() {
                                                 parseInt(e.target.value) || 1,
                                             )
                                         }
+                                        className="h-12 rounded-xl bg-background border-border focus:ring-primary font-bold text-foreground"
                                     />
                                     <InputError
                                         message={errors.allowed_attempts}
@@ -166,9 +173,9 @@ export default function CreateExam() {
                                 </div>
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="start_time">
+                            <div className="grid gap-6 md:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="start_time" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
                                         {t('exams.fields.start_time')} *
                                     </Label>
                                     <Input
@@ -181,12 +188,13 @@ export default function CreateExam() {
                                                 e.target.value,
                                             )
                                         }
+                                        className="h-12 rounded-xl bg-background border-border focus:ring-primary font-bold text-foreground"
                                     />
                                     <InputError message={errors.start_time} />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="end_time">{t('exams.fields.end_time')} *</Label>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="end_time" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{t('exams.fields.end_time')} *</Label>
                                     <Input
                                         id="end_time"
                                         type="datetime-local"
@@ -194,16 +202,17 @@ export default function CreateExam() {
                                         onChange={(e) =>
                                             setData('end_time', e.target.value)
                                         }
+                                        className="h-12 rounded-xl bg-background border-border focus:ring-primary font-bold text-foreground"
                                     />
                                     <InputError message={errors.end_time} />
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="passing_score">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="passing_score" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
                                     {t('exams.fields.passing_score')} {' '}
-                                    <span className="text-muted-foreground">
-                                        {t('exams.fields.passing_score.optional')}
+                                    <span className="text-muted-foreground italic">
+                                        ({t('exams.fields.passing_score.optional')})
                                     </span>
                                 </Label>
                                 <Input
@@ -221,12 +230,16 @@ export default function CreateExam() {
                                         )
                                     }
                                     placeholder={t('exams.fields.passing_score.placeholder')}
+                                    className="h-12 rounded-xl bg-background border-border focus:ring-primary font-bold text-foreground placeholder:text-muted-foreground/40"
                                 />
                                 <InputError message={errors.passing_score} />
                             </div>
 
-                            <div className="space-y-4">
-                                <h3 className="font-medium">{t('exams.fields.options')}</h3>
+                            <div className="space-y-5 py-2">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-4">
+                                    {t('exams.fields.options')}
+                                    <div className="h-px flex-1 bg-border"></div>
+                                </h3>
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         id="shuffle_questions"
@@ -240,7 +253,7 @@ export default function CreateExam() {
                                     />
                                     <Label
                                         htmlFor="shuffle_questions"
-                                        className="cursor-pointer"
+                                        className="cursor-pointer text-foreground font-medium"
                                     >
                                         {t('exams.fields.shuffle_questions')}
                                     </Label>
@@ -258,7 +271,7 @@ export default function CreateExam() {
                                     />
                                     <Label
                                         htmlFor="shuffle_options"
-                                        className="cursor-pointer"
+                                        className="cursor-pointer text-foreground font-medium"
                                     >
                                         {t('exams.fields.shuffle_options')}
                                     </Label>
@@ -276,21 +289,22 @@ export default function CreateExam() {
                                     />
                                     <Label
                                         htmlFor="show_results"
-                                        className="cursor-pointer"
+                                        className="cursor-pointer text-foreground font-medium"
                                     >
                                         {t('exams.fields.show_results')}
                                     </Label>
                                 </div>
                             </div>
 
-                            <div className="flex gap-4">
-                                <Button type="submit" disabled={processing}>
+                            <div className="flex gap-4 pt-4 border-t border-border">
+                                <Button type="submit" disabled={processing} className="rounded-2xl h-12 px-10 font-black uppercase tracking-widest text-[11px] shadow-xl shadow-primary/20">
                                     {t('exams.create')}
                                 </Button>
                                 <Button
                                     type="button"
-                                    variant="outline"
+                                    variant="ghost"
                                     onClick={() => router.visit('/exams')}
+                                    className="rounded-2xl h-12 px-8 font-black uppercase tracking-widest text-[11px] text-muted-foreground hover:text-foreground"
                                 >
                                     {t('common.cancel')}
                                 </Button>

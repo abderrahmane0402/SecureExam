@@ -64,7 +64,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('student.exams.title')} />
             <div className="flex flex-col gap-6 p-6">
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white shadow-lg flex justify-between items-center">
+                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-white shadow-lg flex justify-between items-center">
                     <div>
                         <h1 className="text-2xl font-black uppercase tracking-tight">{t('student.exams.title')}</h1>
                         <p className="mt-1 opacity-90 font-medium">

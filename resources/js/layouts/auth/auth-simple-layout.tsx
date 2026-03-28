@@ -15,7 +15,7 @@ export default function AuthSimpleLayout({
     return (
         <div className="flex min-h-svh">
             {/* Left side - Gradient with branding */}
-            <div className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-12 lg:flex">
+            <div className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-blue-950 via-blue-800 to-blue-700 p-12 lg:flex">
                 <Link href={home()} className="flex items-center gap-2">
                     <BookOpen className="h-8 w-8 text-white" />
                     <span className="text-xl font-bold text-white">

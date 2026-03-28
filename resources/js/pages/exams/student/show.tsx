@@ -65,7 +65,7 @@ export default function StudentExamShow({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={exam.title} />
             <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-                <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-center text-white">
+                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-center text-white">
                     <h1 className="text-2xl font-bold">{exam.title}</h1>
                     {exam.description && (
                         <p className="mt-2 opacity-90">{exam.description}</p>

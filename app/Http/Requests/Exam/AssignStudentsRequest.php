@@ -24,9 +24,9 @@ class AssignStudentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'student_ids' => ['required_without:emails', 'nullable', 'array'],
+            'student_ids' => ['nullable', 'array'],
             'student_ids.*' => ['integer', 'exists:users,id'],
-            'emails' => ['required_without:student_ids', 'nullable', 'string'],
+            'emails' => ['nullable', 'string'],
         ];
     }
 

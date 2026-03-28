@@ -83,7 +83,7 @@ export default function GradeDetail({ exam, attempt }: Props) {
                             </Link>
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50 uppercase">
+                            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-foreground uppercase">
                                 {exam.title}
                             </h1>
                             <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mt-1">
@@ -129,7 +129,7 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                     </p>
                                 </div>
                                 <div className="flex-1 max-w-[200px] h-32 flex items-end">
-                                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl h-3 overflow-hidden">
+                                    <div className="w-full bg-muted rounded-2xl h-3 overflow-hidden">
                                         <div 
                                             className={cn("h-full transition-all duration-1000 ease-out", passed ? "bg-emerald-500" : "bg-rose-500")}
                                             style={{ width: `${attempt.percentage}%` }}
@@ -185,16 +185,16 @@ export default function GradeDetail({ exam, attempt }: Props) {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
-                            <LayoutDashboardIcon className="size-5 text-indigo-500" />
+                            <LayoutDashboardIcon className="size-5 text-blue-500" />
                             {t('student.grade.breakdown')}
                         </h2>
                     </div>
 
                     {!exam.show_results ? (
-                        <Card className="bg-slate-50 dark:bg-slate-900/50 border-dashed border-2 py-16 text-center">
+                        <Card className="bg-muted dark:bg-card/50 border-dashed border-2 py-16 text-center">
                             <CardContent>
-                                <div className="inline-flex p-4 rounded-full bg-slate-200 dark:bg-slate-800 mb-6">
-                                    <EyeOffIcon className="size-8 text-slate-500" />
+                                <div className="inline-flex p-4 rounded-full bg-accent dark:bg-accent mb-6">
+                                    <EyeOffIcon className="size-8 text-muted-foreground" />
                                 </div>
                                 <h3 className="text-lg font-black uppercase tracking-widest mb-2">
                                     {t('student.grade.solutionsPrivate')}
@@ -213,17 +213,17 @@ export default function GradeDetail({ exam, attempt }: Props) {
 
                                 return (
                                     <Card key={q.id} className={cn(
-                                        "overflow-hidden border-l-4 transition-all hover:bg-slate-50/50",
+                                        "overflow-hidden border-l-4 transition-all hover:bg-muted/50",
                                         isCorrect ? "border-l-emerald-500" : isPartial ? "border-l-amber-500" : "border-l-rose-500"
                                     )}>
                                         <CardContent className="p-6">
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex gap-4">
-                                                    <span className="flex size-7 items-center justify-center rounded-full bg-slate-900 text-[10px] font-black text-white">
+                                                    <span className="flex size-7 items-center justify-center rounded-full bg-primary text-[10px] font-black text-primary-foreground">
                                                         {idx + 1}
                                                     </span>
                                                     <div>
-                                                        <p className="font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                                                        <p className="font-bold text-foreground leading-snug">
                                                             {q.content}
                                                         </p>
                                                         <Badge variant="outline" className="mt-2 text-[8px] font-black uppercase tracking-tighter opacity-60">
@@ -249,7 +249,7 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                                 </div>
                                             </div>
 
-                                            <div className="bg-slate-50 dark:bg-background rounded-xl p-4 space-y-4">
+                                            <div className="bg-muted dark:bg-background rounded-xl p-4 space-y-4">
                                                 {/* Student Answer */}
                                                 <div>
                                                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block mb-2">{t('student.grade.yourAnswer')}</span>
@@ -260,10 +260,10 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                                                     <Badge key={o.id} variant="secondary" className="font-bold">
                                                                         {o.content}
                                                                     </Badge>
-                                                                )) || <span className="text-slate-400 italic">No selection</span>}
+                                                                )) || <span className="text-muted-foreground italic">No selection</span>}
                                                             </div>
                                                         ) : (
-                                                            <p className="whitespace-pre-wrap">{q.answer?.text_answer || <span className="text-slate-400 italic">No response provided</span>}</p>
+                                                            <p className="whitespace-pre-wrap">{q.answer?.text_answer || <span className="text-muted-foreground italic">No response provided</span>}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -288,9 +288,9 @@ export default function GradeDetail({ exam, attempt }: Props) {
 
                                                 {/* Instructor Feedback */}
                                                 {q.answer?.instructor_feedback && (
-                                                    <div className="pt-4 border-t border-slate-200">
-                                                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">{t('student.grade.feedback')}</span>
-                                                        <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100 italic text-sm font-medium text-indigo-900 leading-relaxed">
+                                                    <div className="pt-4 border-t border-border">
+                                                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-2">{t('student.grade.feedback')}</span>
+                                                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 italic text-sm font-medium text-blue-900 leading-relaxed">
                                                             "{q.answer.instructor_feedback}"
                                                         </div>
                                                     </div>

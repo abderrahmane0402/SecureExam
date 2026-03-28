@@ -64,9 +64,9 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                     rel="stylesheet"
                 />
             </Head>
-            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-background dark:to-card">
                 {/* Navigation */}
-                <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+                <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm dark:bg-card/80">
                     <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:py-4 lg:px-8">
                         <div className="flex items-center gap-2">
                             <BookOpen className="h-7 w-7 text-blue-600 sm:h-8 sm:w-8" />
@@ -151,7 +151,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
 
                     {/* Mobile Menu */}
                     {mobileMenuOpen && (
-                        <div className="border-t bg-white px-4 py-4 sm:hidden dark:bg-slate-900">
+                        <div className="border-t bg-white px-4 py-4 sm:hidden dark:bg-card">
                             <div className="flex flex-col gap-3">
                                 <div className="flex gap-2">
                                     <Button
@@ -233,7 +233,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                             {t('hero.subtitle')}
                         </span>
                     </h1>
-                    <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:mt-6 sm:text-lg dark:text-slate-300">
+                    <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:mt-6 sm:text-lg dark:text-muted-foreground">
                         {t('hero.description')}
                     </p>
                     <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
@@ -331,7 +331,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
 
                         <Card className="h-full">
                             <CardHeader>
-                                <BookOpen className="mb-2 h-8 w-8 text-indigo-600 sm:h-10 sm:w-10" />
+                                <BookOpen className="mb-2 h-8 w-8 text-blue-600 sm:h-10 sm:w-10" />
                                 <CardTitle className="text-base sm:text-lg">
                                     {t('features.questionTypes.title')}
                                 </CardTitle>
@@ -356,7 +356,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                 </section>
 
                 {/* Role Section */}
-                <section className="bg-white py-12 sm:py-16 dark:bg-slate-800">
+                <section className="bg-white py-12 sm:py-16 dark:bg-muted">
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <h2 className="mb-8 text-center text-2xl font-bold text-slate-900 sm:mb-12 sm:text-3xl dark:text-white">
                             {t('roles.title')}
@@ -370,7 +370,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ul className="space-y-1.5 text-sm text-slate-700 sm:space-y-2 sm:text-base dark:text-slate-300">
+                                    <ul className="space-y-1.5 text-sm text-slate-700 sm:space-y-2 sm:text-base dark:text-muted-foreground">
                                         <li>• {t('roles.instructors.item1')}</li>
                                         <li>• {t('roles.instructors.item2')}</li>
                                         <li>• {t('roles.instructors.item3')}</li>
@@ -389,7 +389,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ul className="space-y-1.5 text-sm text-slate-700 sm:space-y-2 sm:text-base dark:text-slate-300">
+                                    <ul className="space-y-1.5 text-sm text-slate-700 sm:space-y-2 sm:text-base dark:text-muted-foreground">
                                         <li>• {t('roles.students.item1')}</li>
                                         <li>• {t('roles.students.item2')}</li>
                                         <li>• {t('roles.students.item3')}</li>
@@ -408,7 +408,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                     <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">
                         {t('cta.title')}
                     </h2>
-                    <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:mt-4 sm:text-base dark:text-slate-300">
+                    <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:mt-4 sm:text-base dark:text-muted-foreground">
                         {t('cta.description')}
                     </p>
                     {!auth.user && (
@@ -423,7 +423,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                 </section>
 
                 {/* Footer */}
-                <footer className="border-t bg-white py-6 sm:py-8 dark:bg-slate-900">
+                <footer className="border-t bg-white py-6 sm:py-8 dark:bg-card">
                     <div className="mx-auto max-w-7xl px-4 text-center text-xs text-slate-500 sm:px-6 sm:text-sm lg:px-8">
                         <div className="flex items-center justify-center gap-2">
                             <BookOpen className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />
@@ -431,7 +431,7 @@ function HomeContent({ canRegister }: { canRegister: boolean }) {
                                 ExamSecure
                             </span>
                         </div>
-                        <p className="mt-2">
+                        <p className="mt-2 text-muted-foreground">
                             © {new Date().getFullYear()} {t('footer.copyright')}
                         </p>
                     </div>

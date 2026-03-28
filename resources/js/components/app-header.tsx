@@ -2,7 +2,9 @@ import { Link, usePage } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
+import { AppearanceSwitcher } from '@/components/appearance-switcher';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +40,7 @@ type Props = {
 };
 
 const activeItemStyles =
-    'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 font-semibold';
+    'text-foreground bg-accent/50 dark:bg-accent font-semibold';
 
 export function AppHeader({ breadcrumbs = [] }: Props) {
     const { auth } = usePage().props;
@@ -85,7 +87,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
           ];
     return (
         <>
-            <div className="border-b border-sidebar-border/80">
+            <div className="border-b border-border/80">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">
@@ -101,13 +103,13 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             </SheetTrigger>
                             <SheetContent
                                 side="left"
-                                className="flex h-full w-64 flex-col items-stretch justify-between bg-sidebar"
+                                className="flex h-full w-64 flex-col items-stretch justify-between bg-card"
                             >
                                 <SheetTitle className="sr-only">
                                     Navigation menu
                                 </SheetTitle>
                                 <SheetHeader className="flex justify-start text-left">
-                                    <AppLogoIcon className="h-6 w-6 fill-current text-black dark:text-white" />
+                                    <AppLogoIcon className="h-6 w-6 fill-current text-foreground" />
                                 </SheetHeader>
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">
@@ -117,9 +119,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     key={item.title}
                                                     href={item.href}
                                                     className={cn(
-                                                        'flex items-center space-x-2 font-medium transition-colors hover:text-neutral-900 dark:hover:text-neutral-100',
+                                                        'flex items-center space-x-2 font-medium transition-colors hover:text-foreground/80',
                                                         isCurrentUrl(item.href) &&
-                                                            'text-neutral-900 dark:text-neutral-100',
+                                                            'text-foreground',
                                                     )}
                                                 >
                                                     {item.icon && (
@@ -169,7 +171,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             {item.title}
                                         </Link>
                                         {isCurrentUrl(item.href) && (
-                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
+                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-primary"></div>
                                         )}
                                     </NavigationMenuItem>
                                 ))}
@@ -186,6 +188,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             >
                                 <Search className="!size-5 opacity-80 group-hover:opacity-100" />
                             </Button>
+                            <div className="mx-1 h-4 w-px bg-border/50 hidden sm:block" />
+                            <LanguageSwitcher showLabel={false} size="icon" variant="ghost" />
+                            <AppearanceSwitcher size="icon" variant="ghost" />
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -198,7 +203,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             src={auth.user.avatar}
                                             alt={auth.user.name}
                                         />
-                                        <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                        <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
                                             {getInitials(auth.user.name)}
                                         </AvatarFallback>
                                     </Avatar>
@@ -212,8 +217,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 </div>
             </div>
             {breadcrumbs.length > 1 && (
-                <div className="flex w-full border-b border-sidebar-border/70">
-                    <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
+                <div className="flex w-full border-b border-border/70">
+                    <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-muted-foreground md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                     </div>
                 </div>

@@ -1,18 +1,18 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    AlertTriangleIcon,
     UserIcon,
     ArrowLeftIcon,
     DownloadIcon,
     ClipboardCheckIcon,
     ArrowRightIcon,
-    TrophyIcon,
     FilterIcon,
     PlayIcon,
     EyeIcon,
     GraduationCapIcon,
     CheckCircle2Icon,
     CircleIcon,
+    ClockIcon,
+    AlertTriangleIcon,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -32,16 +32,15 @@ import {
     Sheet,
     SheetContent,
     SheetDescription,
-    SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
 import { useLanguageStandalone } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import type { BreadcrumbItem, Exam, ExamAttempt, User, ViolationLog } from '@/types';
-import grading from '@/routes/grading';
-import { show as showExam, toggleShowResults } from '@/routes/exams';
 import { dashboard } from '@/routes';
+import { show as showExam, toggleShowResults } from '@/routes/exams';
+import grading from '@/routes/grading';
+import type { BreadcrumbItem, Exam, ExamAttempt, User, ViolationLog } from '@/types';
 
 interface AttemptWithStudent extends ExamAttempt {
     student: User;
@@ -81,8 +80,9 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
     const getStatusBadge = (status: string, isPublished: boolean = false) => {
         if (isPublished) {
             return (
-                <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30 uppercase text-[10px] font-black tracking-wider px-2 h-5">
-                    {t('status.graded')} & {t('exams.status.published')}
+                <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30 uppercase text-[10px] font-black tracking-wider px-1.5 sm:px-2 h-5">
+                    <EyeIcon className="size-3 sm:mr-1" />
+                    <span className="hidden sm:inline">{t('status.graded')} & {t('exams.status.published')}</span>
                 </Badge>
             );
         }
@@ -93,13 +93,23 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
             graded: 'outline',
             auto_submitted: 'destructive',
         };
+
+        const icons: Record<string, any> = {
+            in_progress: PlayIcon,
+            submitted: ClockIcon,
+            graded: CheckCircle2Icon,
+            auto_submitted: AlertTriangleIcon,
+        };
+
+        const Icon = icons[status] || ClockIcon;
         
         return (
             <Badge 
                 variant={variants[status] || 'secondary'}
-                className="uppercase text-[10px] font-black tracking-wider px-2 h-5"
+                className="uppercase text-[10px] font-black tracking-wider px-1.5 sm:px-2 h-5"
             >
-                {t(`status.${status}` as any)}
+                <Icon className="size-3 sm:mr-1" />
+                <span className="hidden sm:inline">{t(`status.${status}` as any)}</span>
             </Badge>
         );
     };
@@ -181,8 +191,8 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
             <Head title={`${t('grading.title')}: ${exam.title}`} />
             <div className="flex flex-col gap-8 p-6 mx-auto max-w-7xl pb-32">
                 {/* Header */}
-                <div className="flex flex-col gap-4 rounded-3xl bg-slate-900 p-8 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between border border-white/5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
+                <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-blue-400 dark:from-primary/20 dark:via-primary/10 dark:to-background p-8 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                     
                     <div className="flex items-center gap-5 relative z-10">
                         <Button variant="ghost" size="icon" asChild className="rounded-2xl text-white hover:bg-white/10 hover:text-white border border-white/10 shadow-sm">
@@ -192,14 +202,14 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                         </Button>
                         <div>
                             <div className="flex items-center gap-3 mb-1">
-                                <h1 className="text-2xl font-black tracking-tight text-blue-400 uppercase italic">
+                                <h1 className="text-2xl font-black tracking-tight text-white uppercase italic">
                                     {t('grading.title')}
                                 </h1>
-                                <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 font-bold px-3">
+                                <Badge className="bg-white/20 text-white border-white/30 font-bold px-3 shadow-inner">
                                     {stats.pending_grading} {t('grading.stats.pending')}
                                 </Badge>
                             </div>
-                            <p className="text-sm font-bold text-slate-400">
+                            <p className="text-sm font-bold text-blue-100/80 italic">
                                 {exam.title} • {exam.questions_count} {t('exams.questions')}
                             </p>
                         </div>
@@ -210,15 +220,15 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                             variant="outline"
                             size="sm"
                             className={cn(
-                                "rounded-xl font-black uppercase tracking-widest text-[10px] h-10 transition-all border-none bg-white/5 text-slate-300 hover:bg-white/10",
-                                exam.show_results && "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-50"
+                                "rounded-xl font-black uppercase tracking-widest text-[10px] h-10 transition-all border-none bg-white/20 text-white hover:bg-white/30",
+                                exam.show_results && "bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-400"
                             )}
                             onClick={() => router.post(toggleShowResults(exam.id).url)}
                         >
                             <GraduationCapIcon className="mr-2 size-4" />
                             {t('exams.fields.show_results')}: {exam.show_results ? t('common.on') : t('common.off')}
                         </Button>
-                        <Button variant="outline" size="sm" asChild className="rounded-xl h-10 bg-white/5 text-white border-white/10 hover:bg-white/10 font-bold uppercase tracking-widest text-[10px]">
+                        <Button variant="outline" size="sm" asChild className="rounded-xl h-10 bg-white text-blue-600 border-none hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg">
                             <a href={grading.export(exam.id).url}>
                                 <DownloadIcon className="mr-2 size-4" />
                                 {t('grading.show.export')}
@@ -230,18 +240,17 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                 {/* Main Content Area */}
                 <div className="flex flex-col gap-4">
                     {/* Filter Bar */}
-                    <Card className="border-none shadow-md bg-white/50 backdrop-blur-sm sticky top-0 z-20">
-                        <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground mr-2">
+                    <Card className="border border-border shadow-md bg-white/80 dark:bg-card/80 backdrop-blur-md sticky top-0 z-20 rounded-2xl">
+                        <CardContent className="p-4 flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground hidden sm:flex">
                                     <FilterIcon className="size-3" />
                                     {t('common.filters')}:
                                 </div>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                    <SelectTrigger className="w-[170px] h-10 rounded-xl font-bold text-xs bg-white border-slate-200 shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20">
+                                    <SelectTrigger className="flex-1 sm:w-[160px] sm:flex-none h-10 rounded-xl font-bold text-xs bg-white dark:bg-muted border-slate-200 dark:border-border shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 text-slate-900 dark:text-foreground">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                                    <SelectContent className="rounded-xl border-slate-200 dark:border-border shadow-xl bg-white dark:bg-popover">
                                         <SelectItem value="all">{t('grading.filter.all')}</SelectItem>
                                         <SelectItem value="pending">{t('grading.filter.pending')}</SelectItem>
                                         <SelectItem value="graded">{t('grading.filter.graded')}</SelectItem>
@@ -250,10 +259,10 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                 </Select>
 
                                 <Select value={violationFilter} onValueChange={setViolationFilter}>
-                                    <SelectTrigger className="w-[170px] h-10 rounded-xl font-bold text-xs bg-white border-slate-200 shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20">
+                                    <SelectTrigger className="flex-1 sm:w-[160px] sm:flex-none h-10 rounded-xl font-bold text-xs bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 text-slate-900 dark:text-slate-100">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                                    <SelectContent className="rounded-xl border-slate-200 dark:border-white/10 shadow-xl bg-white dark:bg-slate-950">
                                         <SelectItem value="all">{t('common.all')} {t('grading.table.violations')}</SelectItem>
                                         <SelectItem value="has">{t('grading.filter.has_violations')}</SelectItem>
                                         <SelectItem value="none">{t('grading.filter.no_violations')}</SelectItem>
@@ -261,48 +270,55 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                 </Select>
 
                                 <Select value={performanceFilter} onValueChange={setPerformanceFilter}>
-                                    <SelectTrigger className="w-[170px] h-10 rounded-xl font-bold text-xs bg-white border-slate-200 shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20">
+                                    <SelectTrigger className="flex-1 sm:w-[160px] sm:flex-none h-10 rounded-xl font-bold text-xs bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 text-slate-900 dark:text-slate-100">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                                    <SelectContent className="rounded-xl border-slate-200 dark:border-white/10 shadow-xl bg-white dark:bg-slate-950">
                                         <SelectItem value="all">Performance: {t('common.all')}</SelectItem>
                                         <SelectItem value="pass">{t('grading.filter.passed')}</SelectItem>
                                         <SelectItem value="fail">{t('grading.filter.failed')}</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </div>
                         </CardContent>
                     </Card>
 
                     {/* Submissions List */}
-                    <Card className="rounded-3xl overflow-hidden border-none shadow-xl bg-white/80 backdrop-blur-md transition-all duration-500">
-                        <div className="bg-slate-50/50 dark:bg-slate-900/50 border-b px-8 py-5 flex items-center justify-between">
+                    <Card className="rounded-3xl overflow-hidden border border-slate-200 dark:border-white/5 shadow-xl bg-white/80 dark:bg-slate-950/50 backdrop-blur-md transition-all duration-500">
+                        <div className="bg-slate-50/50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-white/5 px-8 py-5 flex items-center justify-between">
                             <div className="flex items-center gap-6">
                                 <button 
                                     onClick={toggleAll}
-                                    className="flex items-center justify-center p-1 rounded-lg hover:bg-slate-200 transition-colors"
+                                    className="flex items-center justify-center p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
                                 >
                                     {isAllSelected ? (
-                                        <CheckCircle2Icon className="size-6 text-blue-600 fill-blue-50" />
+                                        <CheckCircle2Icon className="size-6 text-blue-600 fill-blue-50 dark:fill-blue-950" />
                                     ) : (
-                                        <CircleIcon className="size-6 text-slate-300" />
+                                        <CircleIcon className="size-6 text-slate-300 dark:text-slate-700" />
                                     )}
                                 </button>
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                                     {t('grading.table.student')}s ({filteredAttempts.length})
                                 </h3>
                             </div>
                             
-                            <div className="flex items-center gap-4 text-xs font-bold text-slate-400 italic">
-                                <span>{stats.graded} / {stats.total} {t('status.graded')}</span>
-                                <span className="text-slate-200">|</span>
-                                <span>{stats.published} {t('grading.stats.published')}</span>
+                            <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-muted-foreground italic">
+                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 uppercase text-[10px] font-black tracking-wider px-2 h-5">
+                                    <CheckCircle2Icon className="size-3 sm:mr-1.5" />
+                                    <span className="hidden sm:inline">{stats.graded} / {stats.total} {t('status.graded')}</span>
+                                    <span className="sm:hidden">{stats.graded}/{stats.total}</span>
+                                </Badge>
+                                <span className="text-slate-200 dark:text-border hidden sm:inline">|</span>
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 uppercase text-[10px] font-black tracking-wider px-2 h-5">
+                                    <EyeIcon className="size-3 sm:mr-1.5" />
+                                    <span className="hidden sm:inline">{stats.published} {t('grading.stats.published')}</span>
+                                    <span className="sm:hidden">{stats.published}</span>
+                                </Badge>
                             </div>
                         </div>
-
+ 
                         <CardContent className="p-0">
                             {filteredAttempts.length > 0 ? (
-                                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                <div className="divide-y divide-slate-100 dark:divide-white/5">
                                     {filteredAttempts.map((attempt) => (
                                         <div
                                             key={attempt.id}
@@ -316,9 +332,9 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                                 className="shrink-0 transition-all hover:scale-110"
                                             >
                                                 {selectedIds.includes(attempt.id) ? (
-                                                    <CheckCircle2Icon className="size-6 text-blue-600 fill-blue-50" />
+                                                    <CheckCircle2Icon className="size-6 text-blue-600 fill-blue-50 dark:fill-blue-950" />
                                                 ) : (
-                                                    <CircleIcon className="size-6 text-slate-300" />
+                                                    <CircleIcon className="size-6 text-slate-300 dark:text-slate-700" />
                                                 )}
                                             </button>
                                             
@@ -343,11 +359,11 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                                             {attempt.student.name}
                                                         </p>
                                                         <div className="flex items-center gap-3 mt-0.5 min-w-0">
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 truncate">
                                                                 {attempt.student.email}
                                                             </p>
-                                                            <span className="text-slate-300 hidden sm:inline">•</span>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">
+                                                            <span className="text-slate-300 dark:text-white/20 hidden sm:inline">•</span>
+                                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 hidden sm:inline">
                                                                 #{attempt.attempt_number}
                                                             </p>
                                                         </div>
@@ -356,8 +372,8 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
 
                                                 <div className="flex items-center justify-between md:justify-end gap-8 md:gap-12">
                                                     <div className="text-right shrink-0">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t('grading.table.submitted')}</p>
-                                                        <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">{t('grading.table.submitted')}</p>
+                                                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
                                                             {formatDate(attempt.submitted_at || attempt.started_at)}
                                                         </p>
                                                     </div>
@@ -478,8 +494,8 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
 
             {/* Violation Details Sheet */}
             <Sheet open={!!selectedViolations} onOpenChange={(open) => !open && setSelectedViolations(null)}>
-                <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto border-l-rose-100 flex flex-col p-0 bg-white/95 backdrop-blur-xl">
-                    <div className="p-8 border-b bg-rose-50/10 relative overflow-hidden shrink-0">
+                <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto border-l-rose-100 dark:border-l-rose-900/50 flex flex-col p-0 bg-white dark:bg-slate-950 backdrop-blur-xl">
+                    <div className="p-8 border-b dark:border-white/5 bg-rose-50/10 dark:bg-rose-950/10 relative overflow-hidden shrink-0">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                         <div className="flex items-center gap-5 relative z-10">
                             <div className="flex size-14 items-center justify-center rounded-[2rem] bg-rose-600 text-white shadow-xl shadow-rose-600/20 animate-pulse">
@@ -498,7 +514,7 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                         {selectedViolations && selectedViolations.violation_logs?.length > 0 ? (
                             <div className="grid gap-4">
                                 {selectedViolations.violation_logs.map((log) => (
-                                    <div key={log.id} className="group relative rounded-3xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md hover:border-rose-100 transition-all duration-300 overflow-hidden">
+                                    <div key={log.id} className="group relative rounded-3xl border border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900/50 backdrop-blur-sm p-6 shadow-sm hover:shadow-md hover:border-rose-100 dark:hover:border-rose-900 transition-all duration-300 overflow-hidden">
                                         <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-600" />
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex flex-col gap-1">
@@ -509,14 +525,14 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                                     {t(`violation.${log.violation_type}` as any)}
                                                 </h4>
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-300 uppercase shrink-0 bg-slate-50 px-2 py-1 rounded-lg">
+                                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase shrink-0 bg-slate-50 dark:bg-slate-950 px-2 py-1 rounded-lg">
                                                 {formatDate(log.occurred_at).split(',')[1]}
                                             </span>
                                         </div>
-                                        <p className="text-sm font-bold text-slate-500 leading-relaxed italic">
+                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-relaxed italic">
                                             {t(`violation.${log.violation_type}.desc` as any)}
                                         </p>
-                                        <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-600">
+                                        <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-white/5 text-xs font-bold text-slate-600 dark:text-slate-400">
                                             {log.details || 'System capture: Standard focus breach detected.'}
                                         </div>
                                     </div>
@@ -531,7 +547,7 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                         )}
                     </div>
 
-                    <div className="p-8 border-t bg-slate-50/50 shrink-0">
+                    <div className="p-8 border-t dark:border-white/10 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
                         <Button asChild className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-900/10 font-black uppercase tracking-widest transition-all hover:scale-[1.02] group">
                             <Link href={grading.show(selectedViolations?.id || 0).url}>
                                 {t('grading.action.review')} & Penalize
@@ -544,3 +560,4 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
         </AppLayout>
     );
 }
+

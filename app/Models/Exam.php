@@ -95,9 +95,13 @@ class Exam extends Model
     {
         $now = now();
 
+        // Use Carbon instances for comparison, ignoring the string-formatting accessors
+        $start = \Illuminate\Support\Carbon::parse($this->getRawOriginal('start_time'));
+        $end = \Illuminate\Support\Carbon::parse($this->getRawOriginal('end_time'));
+
         return $this->is_published
-            && $this->start_time <= $now
-            && $this->end_time >= $now;
+            && $start <= $now
+            && $end >= $now;
     }
 
     public function getTotalPointsAttribute(): float

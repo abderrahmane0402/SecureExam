@@ -21,7 +21,6 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -33,6 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useExamSecurity } from '@/hooks/use-exam-security';
 import { useLanguage } from '@/hooks/use-language';
+import { cn } from '@/lib/utils';
 import type {
     Exam,
     ExamAttempt,
@@ -98,7 +98,7 @@ export default function TakeExam({
     });
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
     const [isPaused, setIsPaused] = useState(attempt.is_paused);
-    const saveTimeoutRef = useRef<NodeJS.Timeout|null>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const currentQuestion = questions[currentIndex];
 
@@ -133,7 +133,7 @@ export default function TakeExam({
         initialViolationCount: attempt.violation_count || 0,
         onViolation: (type, count) => {
             setViolationCount(count);
-            
+
             // Show premium security toast warning
             toast.error(t(`violation.${type}` as any) || type.replace(/_/g, ' '), {
                 icon: <ShieldAlertIcon className="size-5 text-destructive" />,
@@ -373,10 +373,10 @@ export default function TakeExam({
         return (
             <>
                 <Head title="Submitting Exam..." />
-                <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
+                <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
                     <Loader2Icon className="size-16 animate-spin text-primary mb-6" />
                     <h1 className="text-3xl font-black mb-2">{t('exam.take.submitting')}...</h1>
-                    <p className="text-slate-400 font-medium">Please wait while your answers are securely saved...</p>
+                    <p className="text-muted-foreground font-medium">Please wait while your answers are securely saved...</p>
                 </div>
             </>
         );
@@ -386,32 +386,32 @@ export default function TakeExam({
         return (
             <>
                 <Head title={`${t('exam.take.start')}: ${exam.title}`} />
-                <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+                <div className="flex min-h-screen items-center justify-center bg-background p-6">
                     <Card className="w-full max-w-lg shadow-xl border-t-4 border-t-primary">
                         <CardHeader className="text-center pt-8">
                             <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
                                 <FileTextIcon className="size-8 text-primary" />
                             </div>
-                            <CardTitle className="text-2xl font-black text-slate-800 tracking-tight">
+                            <CardTitle className="text-2xl font-black text-foreground tracking-tight">
                                 {exam.title}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-8 pb-10">
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 font-bold text-slate-900 border-b pb-2">
+                                <div className="flex items-center gap-2 font-bold text-foreground border-b pb-2">
                                     <ClipboardCheckIcon className="size-5 text-primary" />
                                     {t('exam.take.beforeYouBegin')}
                                 </div>
                                 <ul className="space-y-4">
                                     {[1, 2, 3, 4].map((num) => (
-                                        <li key={num} className="flex gap-3 text-sm text-slate-600">
-                                            <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
+                                        <li key={num} className="flex gap-3 text-sm text-muted-foreground">
+                                            <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground">
                                                 {num}
                                             </div>
                                             {(t as any)(`exam.take.rule${num}`)}
                                         </li>
                                     ))}
-                                    <li className="flex gap-3 text-sm text-slate-600 font-bold border-t pt-4">
+                                    <li className="flex gap-3 text-sm text-muted-foreground font-bold border-t pt-4">
                                         <ClockIcon className="size-5 shrink-0 text-primary" />
                                         <span>
                                             {t('exam.take.rule5')} {Math.floor(attempt.remaining_time / 60)} {t('exam.minutes')}
@@ -419,7 +419,7 @@ export default function TakeExam({
                                     </li>
                                 </ul>
                             </div>
-                            
+
                             <div className="pt-2">
                                 <Button
                                     type="button"
@@ -445,15 +445,15 @@ export default function TakeExam({
         return (
             <>
                 <Head title="Exam Paused" />
-                <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm text-white p-6 text-center">
+                <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm text-foreground p-6 text-center">
                     <div className="mb-8 rounded-full bg-amber-500/20 p-6 ring-1 ring-amber-500/50">
                         <PauseIcon className="size-16 text-amber-500 animate-pulse" />
                     </div>
                     <h2 className="text-4xl font-black tracking-tight uppercase mb-4">Exam Paused</h2>
-                    <p className="text-xl text-slate-300 max-w-lg font-medium leading-relaxed mb-8">
+                    <p className="text-xl text-muted-foreground max-w-lg font-medium leading-relaxed mb-8">
                         The instructor has temporarily paused your exam session. Please wait for further instructions.
                     </p>
-                    <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-500 bg-white/5 px-6 py-3 rounded-2xl border border-white/10 italic">
+                    <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-muted-foreground bg-muted/20 px-6 py-3 rounded-2xl border border-border italic">
                         <div className="size-2 rounded-full bg-emerald-500 animate-ping" />
                         Awaiting Instructor Signal...
                     </div>
@@ -522,12 +522,12 @@ export default function TakeExam({
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="rounded-lg bg-slate-50 p-4 border border-slate-200">
-                                    <h3 className="text-sm font-bold flex items-center gap-2 mb-3 text-slate-700">
+                                <div className="rounded-lg bg-muted p-4 border border-border">
+                                    <h3 className="text-sm font-bold flex items-center gap-2 mb-3 text-foreground">
                                         <AlertTriangleIcon className="size-4 text-amber-500" />
                                         {t('exam.take.beforeYouBegin')}
                                     </h3>
-                                    <ul className="list-disc space-y-2 pl-5 text-sm text-slate-600">
+                                    <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
                                         <li>{t('exam.take.rule1')}</li>
                                         <li>{t('exam.take.rule2')}</li>
                                         <li>{t('exam.take.rule3')}</li>
@@ -556,7 +556,7 @@ export default function TakeExam({
                                         <MaximizeIcon className="mr-2 size-6" />
                                         {t('exam.take.return').toUpperCase()}
                                     </Button>
-                                    <p className="text-center text-xs text-slate-500 font-medium">
+                                    <p className="text-center text-xs text-muted-foreground font-medium">
                                         {lockReason}
                                     </p>
                                 </div>
@@ -566,70 +566,68 @@ export default function TakeExam({
                 )}
 
                 {/* Header */}
-                <header className="sticky top-0 z-40 border-b bg-background px-4 py-3">
-                    <div className="mx-auto flex max-w-7xl items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <h1 className="font-semibold">{exam.title}</h1>
-                            {saving && (
-                                <Badge
-                                    variant="secondary"
-                                    className="animate-pulse"
-                                >
-                                    <SaveIcon className="mr-1 size-3" />
-                                    {t('exam.take.saving')}
-                                </Badge>
-                            )}
-                            {saveError && (
-                                <Badge
-                                    variant="destructive"
-                                >
-                                    <AlertTriangleIcon className="mr-1 size-3" />
-                                    Error saving
-                                </Badge>
-                            )}
+                <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md px-4 py-2 sm:py-3">
+                    <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+                        <div className="flex flex-1 items-center gap-2 min-w-0">
+                            <h1 className="font-bold truncate text-sm sm:text-base">{exam.title}</h1>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {saving && (
+                                    <div className="flex size-5 items-center justify-center text-blue-500 animate-pulse" title={t('exam.take.saving')}>
+                                        <SaveIcon className="size-4" />
+                                    </div>
+                                )}
+                                {saveError && (
+                                    <div className="flex size-5 items-center justify-center text-rose-500" title="Error saving">
+                                        <AlertTriangleIcon className="size-4" />
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 shrink-0">
                             {violationCount > 0 && (
-                                <Badge variant="destructive">
-                                    <AlertTriangleIcon className="mr-1 size-3" />
-                                    {violationCount} {t('exam.violations')}
+                                <Badge variant="destructive" className="h-7 px-2 text-[10px] font-black uppercase tracking-wider">
+                                    <ShieldAlertIcon className="mr-1 size-3" />
+                                    <span className="hidden xs:inline">{violationCount} {t('exam.violations')}</span>
+                                    <span className="xs:hidden">{violationCount}</span>
                                 </Badge>
-                            )}
-
-                            {!isFullscreen && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => enterFullscreen()}
-                                >
-                                    <MaximizeIcon className="size-4" />
-                                    {t('exam.take.fullscreen')}
-                                </Button>
                             )}
 
                             <div
-                                className={`flex items-center gap-2 rounded-lg px-4 py-2 font-mono text-lg ${
+                                className={cn(
+                                    "flex items-center gap-2 rounded-[0.6rem] px-3 py-1.5 font-black text-sm transition-colors",
                                     isLowTime
-                                        ? 'animate-pulse bg-red-100 text-red-700'
-                                        : 'bg-muted'
-                                }`}
+                                        ? 'animate-pulse bg-destructive/10 text-destructive ring-2 ring-destructive/20'
+                                        : 'bg-muted text-foreground border border-border'
+                                )}
                             >
-                                <ClockIcon className="size-5" />
+                                <ClockIcon className="size-4" />
                                 {formatTime(timeRemaining)}
                             </div>
 
-                            <Button data-test="header-submit-button" onClick={handleSubmit}>
-                                <SendIcon className="size-4" />
+                            <Button
+                                data-test="header-submit-button"
+                                size="sm"
+                                onClick={handleSubmit}
+                                className="hidden sm:flex h-9 rounded-xl font-black uppercase tracking-widest text-[10px] bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+                            >
+                                <SendIcon className="size-3.5" />
                                 {t('exam.take.submit')}
                             </Button>
                         </div>
                     </div>
+                    {/* Progress Bar */}
+                    <div className="absolute bottom-0 left-0 h-[2px] bg-muted w-full overflow-hidden">
+                        <div
+                            className="h-full bg-primary transition-all duration-500 ease-out"
+                            style={{ width: `${(answeredCount / questions.length) * 100}%` }}
+                        />
+                    </div>
                 </header>
 
-                <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:flex-row">
+                <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:flex-row pb-24 md:pb-0">
                     {/* Question Navigation Sidebar */}
-                    <aside className="w-full border-b bg-muted/30 p-4 md:w-64 md:border-r md:border-b-0">
+                    <aside className="w-full border-b bg-muted/20 p-4 md:w-64 md:border-r md:border-b-0">
                         <div className="sticky top-20">
                             <div className="mb-4">
                                 <p className="text-sm text-muted-foreground">
@@ -653,13 +651,12 @@ export default function TakeExam({
                                             onClick={() =>
                                                 setCurrentIndex(index)
                                             }
-                                            className={`relative flex h-10 items-center justify-center rounded text-sm font-medium transition-colors ${
-                                                isCurrent
+                                            className={`relative flex h-10 items-center justify-center rounded text-sm font-medium transition-colors ${isCurrent
                                                     ? 'bg-primary text-primary-foreground'
                                                     : isAnswered
-                                                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                                      : 'bg-muted hover:bg-muted/80'
-                                            }`}
+                                                        ? 'bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500/30'
+                                                        : 'bg-muted hover:bg-muted/80'
+                                                }`}
                                         >
                                             {index + 1}
                                             {isFlagged && (
@@ -670,17 +667,17 @@ export default function TakeExam({
                                 })}
                             </div>
 
-                            <div className="mt-4 hidden space-y-2 border-t pt-4 text-xs text-muted-foreground md:block">
+                            <div className="mt-4 hidden space-y-2 border-t pt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground md:block">
                                 <div className="flex items-center gap-2">
-                                    <span className="h-4 w-4 rounded bg-green-100" />
+                                    <span className="h-3 w-3 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30" />
                                     <span>{t('exam.take.answered')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="h-4 w-4 rounded bg-muted" />
+                                    <span className="h-3 w-3 rounded-full bg-muted" />
                                     <span>{t('exam.take.notAnswered')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <FlagIcon className="size-4 fill-yellow-500 text-yellow-500" />
+                                    <FlagIcon className="size-3.5 fill-amber-500 text-amber-500" />
                                     <span>{t('exam.take.flaggedDesc')}</span>
                                 </div>
                             </div>
@@ -692,13 +689,13 @@ export default function TakeExam({
                         {currentQuestion && (
                             <Card className="mx-auto max-w-3xl">
                                 <CardHeader>
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-2">
-                                            <Badge variant="outline">
+                                            <Badge variant="outline" className="bg-muted border-border text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
                                                 {t('exam.take.question')} {currentIndex + 1} {t('exam.of')}{' '}
                                                 {questions.length}
                                             </Badge>
-                                            <Badge variant="secondary">
+                                            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none text-[10px] font-bold shadow-sm px-2">
                                                 {currentQuestion.points} {t('exam.points')}
                                             </Badge>
                                         </div>
@@ -708,14 +705,13 @@ export default function TakeExam({
                                             onClick={() =>
                                                 toggleFlag(currentQuestion.id)
                                             }
-                                            className={
-                                                flagged.has(currentQuestion.id)
-                                                    ? 'text-yellow-600'
-                                                    : ''
-                                            }
+                                            className={cn(
+                                                "h-8 rounded-lg text-xs font-bold",
+                                                flagged.has(currentQuestion.id) ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700' : 'text-muted-foreground hover:bg-muted'
+                                            )}
                                         >
                                             <FlagIcon
-                                                className={`size-4 ${flagged.has(currentQuestion.id) ? 'fill-yellow-500' : ''}`}
+                                                className={cn("size-3.5 mr-1.5", flagged.has(currentQuestion.id) && "fill-amber-500")}
                                             />
                                             {flagged.has(currentQuestion.id)
                                                 ? t('exam.take.unflag')
@@ -730,85 +726,75 @@ export default function TakeExam({
                                     {/* Multiple Choice Single */}
                                     {currentQuestion.type ===
                                         'multiple_choice_single' && (
-                                        <div className="space-y-2">
-                                            {currentQuestion.options.map(
-                                                (option) => (
-                                                    <label
-                                                        key={option.id}
-                                                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
-                                                            currentAnswer?.selected_options?.includes(
-                                                                option.id,
-                                                            )
-                                                                ? 'border-primary bg-primary/5'
-                                                                : 'hover:bg-muted/50'
-                                                        }`}
-                                                    >
-                                                        <input
-                                                            type="radio"
-                                                            name={`question-${currentQuestion.id}`}
-                                                            checked={
-                                                                currentAnswer?.selected_options?.includes(
-                                                                    option.id,
-                                                                ) || false
-                                                            }
-                                                            onChange={() =>
-                                                                handleSingleChoice(
-                                                                    option.id,
-                                                                )
-                                                            }
-                                                            className="size-4"
-                                                        />
-                                                        <span>
-                                                            {option.content}
-                                                        </span>
-                                                    </label>
-                                                ),
-                                            )}
-                                        </div>
-                                    )}
+                                            <div className="space-y-3">
+                                                {currentQuestion.options.map(
+                                                    (option) => (
+                                                        <div
+                                                            key={option.id}
+                                                            onClick={() => handleSingleChoice(option.id)}
+                                                            className={cn(
+                                                                "flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all duration-200",
+                                                                currentAnswer?.selected_options?.includes(option.id)
+                                                                    ? 'border-primary bg-primary/5 shadow-sm'
+                                                                    : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'
+                                                            )}
+                                                        >
+                                                            <div className={cn(
+                                                                "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors",
+                                                                currentAnswer?.selected_options?.includes(option.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border"
+                                                            )}>
+                                                                {currentAnswer?.selected_options?.includes(option.id) && <div className="size-2 rounded-full bg-primary-foreground shadow-sm" />}
+                                                            </div>
+                                                            <span className={cn(
+                                                                "text-sm font-bold transition-colors",
+                                                                currentAnswer?.selected_options?.includes(option.id) ? "text-primary" : "text-foreground"
+                                                            )}>
+                                                                {option.content}
+                                                            </span>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
 
                                     {/* Multiple Choice Multiple */}
                                     {currentQuestion.type ===
                                         'multiple_choice_multiple' && (
-                                        <div className="space-y-2">
-                                            <p className="text-sm text-muted-foreground">
-                                                {t('exam.take.selectMultiple')}
-                                            </p>
-                                            {currentQuestion.options.map(
-                                                (option) => (
-                                                    <label
-                                                        key={option.id}
-                                                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
-                                                            currentAnswer?.selected_options?.includes(
-                                                                option.id,
-                                                            )
-                                                                ? 'border-primary bg-primary/5'
-                                                                : 'hover:bg-muted/50'
-                                                        }`}
-                                                    >
-                                                        <Checkbox
-                                                            checked={
-                                                                currentAnswer?.selected_options?.includes(
-                                                                    option.id,
-                                                                ) || false
-                                                            }
-                                                            onCheckedChange={(
-                                                                checked,
-                                                            ) =>
-                                                                handleMultipleChoice(
-                                                                    option.id,
-                                                                    checked as boolean,
-                                                                )
-                                                            }
-                                                        />
-                                                        <span>
-                                                            {option.content}
-                                                        </span>
-                                                    </label>
-                                                ),
-                                            )}
-                                        </div>
-                                    )}
+                                            <div className="space-y-3">
+                                                <p className="text-sm font-semibold text-muted-foreground mb-2">
+                                                    {t('exam.take.selectMultiple')}
+                                                </p>
+                                                {currentQuestion.options.map(
+                                                    (option) => (
+                                                        <div
+                                                            key={option.id}
+                                                            onClick={() => handleMultipleChoice(option.id, !(currentAnswer?.selected_options?.includes(option.id)))}
+                                                            className={cn(
+                                                                "flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all duration-200",
+                                                                currentAnswer?.selected_options?.includes(option.id)
+                                                                    ? 'border-primary bg-primary/5 shadow-sm'
+                                                                    : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'
+                                                            )}
+                                                        >
+                                                            <div className={cn(
+                                                                "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors",
+                                                                currentAnswer?.selected_options?.includes(option.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border"
+                                                            )}>
+                                                                {currentAnswer?.selected_options?.includes(option.id) && (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="size-3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                                )}
+                                                            </div>
+                                                            <span className={cn(
+                                                                "text-sm font-bold transition-colors",
+                                                                currentAnswer?.selected_options?.includes(option.id) ? "text-primary" : "text-foreground"
+                                                            )}>
+                                                                {option.content}
+                                                            </span>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
 
                                     {/* True/False */}
                                     {currentQuestion.type === 'true_false' && (
@@ -816,12 +802,11 @@ export default function TakeExam({
                                             {['true', 'false'].map((value) => (
                                                 <label
                                                     key={value}
-                                                    className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border p-4 transition-colors ${
-                                                        currentAnswer?.text_answer ===
-                                                        value
+                                                    className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border p-4 transition-colors ${currentAnswer?.text_answer ===
+                                                            value
                                                             ? 'border-primary bg-primary/5'
                                                             : 'hover:bg-muted/50'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <input
                                                         type="radio"
@@ -877,10 +862,11 @@ export default function TakeExam({
                             </Card>
                         )}
 
-                        {/* Navigation Buttons */}
-                        <div className="mx-auto mt-6 flex max-w-3xl items-center justify-between">
+                        {/* Navigation Buttons (Desktop) */}
+                        <div className="mx-auto mt-8 hidden max-w-3xl items-center justify-between md:flex">
                             <Button
                                 variant="outline"
+                                className="h-11 px-6 rounded-xl font-bold border-2 border-border hover:bg-muted"
                                 onClick={() =>
                                     setCurrentIndex(
                                         Math.max(0, currentIndex - 1),
@@ -888,27 +874,80 @@ export default function TakeExam({
                                 }
                                 disabled={currentIndex === 0}
                             >
-                                <ChevronLeftIcon className="size-4" />
+                                <ChevronLeftIcon className="size-4 mr-2" />
                                 {t('exam.take.previous')}
                             </Button>
 
                             {currentIndex < questions.length - 1 ? (
                                 <Button
+                                    className="h-11 px-8 rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
                                     onClick={() =>
                                         setCurrentIndex(currentIndex + 1)
                                     }
                                 >
                                     {t('exam.take.next')}
-                                    <ChevronRightIcon className="size-4" />
+                                    <ChevronRightIcon className="size-4 ml-2" />
                                 </Button>
                             ) : (
-                                <Button onClick={handleSubmit}>
-                                    <SendIcon className="size-4" />
+                                <Button
+                                    className="h-11 px-8 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20"
+                                    onClick={handleSubmit}
+                                >
+                                    <SendIcon className="size-4 mr-2" />
                                     {t('exam.take.submit')}
                                 </Button>
                             )}
                         </div>
                     </main>
+                </div>
+
+                {/* Sticky Bottom Navigation (Mobile Only) */}
+                <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-card/95 backdrop-blur-md border-t border-border p-4 pb-6 shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            className="size-12 p-0 flex items-center justify-center rounded-2xl border-2 border-border"
+                            onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                            disabled={currentIndex === 0}
+                        >
+                            <ChevronLeftIcon className="size-6 text-muted-foreground" />
+                        </Button>
+
+                        <div className="flex-1 flex flex-col items-center justify-center -mt-1">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">
+                                Question {currentIndex + 1} of {questions.length}
+                            </div>
+                            <div className="flex items-center gap-1.5 overflow-hidden w-full max-w-[100px] h-1.5 bg-muted rounded-full">
+                                {questions.map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={cn(
+                                            "h-full flex-1 transition-all",
+                                            i === currentIndex ? "bg-primary" : (answers[questions[i].id] ? "bg-emerald-500" : "bg-muted-foreground/30")
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        {currentIndex < questions.length - 1 ? (
+                            <Button
+                                className="h-12 flex-1 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-foreground text-background border-none shadow-lg shadow-foreground/10"
+                                onClick={() => setCurrentIndex(currentIndex + 1)}
+                            >
+                                {t('exam.take.next')}
+                                <ChevronRightIcon className="size-4 ml-2" />
+                            </Button>
+                        ) : (
+                            <Button
+                                className="h-12 flex-1 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-emerald-600 border-none shadow-lg shadow-emerald-600/10"
+                                onClick={handleSubmit}
+                            >
+                                <SendIcon className="size-4 mr-2" />
+                                {t('exam.take.submit')}
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
 

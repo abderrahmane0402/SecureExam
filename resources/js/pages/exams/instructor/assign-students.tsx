@@ -21,6 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useLanguageStandalone } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItem, Exam, User } from '@/types';
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export default function AssignStudents({ exam, students, groups }: Props) {
+    const { t } = useLanguageStandalone();
     const [search, setSearch] = useState('');
     
     const initialSelectedIds = useMemo(() => 
@@ -123,38 +125,39 @@ export default function AssignStudents({ exam, students, groups }: Props) {
             
             <div className="flex flex-col gap-8 p-6 max-w-5xl mx-auto">
                 {/* Header */}
-                <div className="flex flex-col gap-4 rounded-2xl bg-indigo-950 p-8 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between relative overflow-hidden">
+                <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-blue-400 dark:from-blue-900 dark:via-blue-950 dark:to-background p-8 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                     <div className="relative z-10">
                         <div className="flex items-center gap-3 mb-2">
-                            <Button variant="ghost" size="icon" asChild className="rounded-full text-indigo-200 hover:bg-white/10 hover:text-white">
+                            <Button variant="ghost" size="icon" asChild className="rounded-2xl text-white hover:bg-white/10 hover:text-white border border-white/10 shadow-sm transition-all shrink-0">
                                 <Link href={`/exams/${exam.id}`}>
                                     <ArrowLeftIcon className="size-5" />
                                 </Link>
                             </Button>
-                            <h1 className="text-2xl font-black tracking-tight uppercase">Manage Access</h1>
+                            <h1 className="text-2xl font-black tracking-tight uppercase italic">{t('exams.assign.title')}</h1>
                         </div>
-                        <p className="text-indigo-200 font-medium max-w-md">
-                            Control which students are allowed to take <span className="text-white font-bold">{exam.title}</span>.
+                        <p className="text-blue-100/90 font-bold max-w-md italic text-sm">
+                            {t('exams.assign.description')} <span className="text-white font-black underline decoration-white/30 decoration-2 underline-offset-4">{exam.title}</span>.
                         </p>
                     </div>
-                    <UsersIcon className="absolute -right-8 -bottom-8 size-48 text-indigo-900/40 rotate-12" />
+                    <UsersIcon className="absolute -right-8 -bottom-8 size-48 text-white/10 rotate-12" />
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8 pb-20">
                     <Tabs defaultValue="search" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 h-14 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
-                            <TabsTrigger value="search" className="rounded-lg font-black uppercase text-xs tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                        <TabsList className="grid w-full grid-cols-2 h-14 p-1.5 bg-slate-100/80 dark:bg-muted/80 backdrop-blur-md rounded-2xl mb-8 border border-slate-200/50 dark:border-border">
+                            <TabsTrigger value="search" className="rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-lg transition-all duration-300">
                                 <SearchIcon className="mr-2 size-4" />
-                                Student Directory
+                                {t('exams.assign.tabs.directory')}
                             </TabsTrigger>
-                            <TabsTrigger value="bulk" className="rounded-lg font-black uppercase text-xs tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                            <TabsTrigger value="bulk" className="rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-lg transition-all duration-300">
                                 <MailIcon className="mr-2 size-4" />
-                                Bulk Invite (Emails)
+                                {t('exams.assign.tabs.bulk')}
                             </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="search" className="mt-0 focus-visible:ring-0">
-                            <div className="flex flex-wrap gap-2 mb-4">
+                            <div className="flex flex-wrap gap-2 mb-6">
                                 {groups.map(group => {
                                     const groupStudents = students.filter(s => s.group === group).map(s => s.id);
                                     const currentIds = Array.isArray(data.student_ids) ? data.student_ids : [];
@@ -168,8 +171,8 @@ export default function AssignStudents({ exam, students, groups }: Props) {
                                             className={cn(
                                                 "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
                                                 allInGroupSelected 
-                                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200" 
-                                                    : "bg-white dark:bg-slate-900 border-slate-200 text-slate-500 hover:border-indigo-300"
+                                                    ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                                                    : "bg-card border-border text-muted-foreground hover:border-primary/50"
                                             )}
                                         >
                                             {group}
@@ -178,30 +181,30 @@ export default function AssignStudents({ exam, students, groups }: Props) {
                                 })}
                             </div>
 
-                            <Card className="rounded-2xl border-none shadow-lg overflow-hidden">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900 border-b px-8 py-6">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div className="relative flex-1 max-w-md">
+                             <Card className="rounded-[2.5rem] border border-border shadow-xl overflow-hidden bg-card/40 backdrop-blur-md">
+                                <CardHeader className="bg-muted/50 border-b border-border px-6 py-6 sm:px-8">
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                        <div className="relative flex-1 w-full lg:max-w-md">
                                             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                                             <Input
-                                                placeholder="Search by name or email..."
+                                                placeholder={t('common.search')}
                                                 value={search}
                                                 onChange={(e) => setSearch(e.target.value)}
-                                                className="pl-10 h-11 border-slate-200 rounded-xl bg-white focus-visible:ring-indigo-500"
+                                                className="pl-10 h-11 border-border rounded-xl bg-background text-foreground transition-all focus-visible:ring-primary shadow-sm"
                                             />
                                         </div>
-                                        <div className="flex gap-2">
-                                            <Button type="button" variant="outline" size="sm" onClick={selectAll} className="font-bold text-[10px] uppercase tracking-widest h-9 rounded-lg">
-                                                Select All
+                                        <div className="flex items-center gap-2">
+                                            <Button type="button" variant="outline" size="sm" onClick={selectAll} className="flex-1 lg:flex-none font-black text-[10px] uppercase tracking-widest h-9 rounded-xl border-border hover:bg-accent transition-all shadow-sm">
+                                                {t('common.selectAll')}
                                             </Button>
-                                            <Button type="button" variant="ghost" size="sm" onClick={deselectAll} className="font-bold text-[10px] uppercase tracking-widest h-9 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50">
-                                                Clear All
+                                            <Button type="button" variant="ghost" size="sm" onClick={deselectAll} className="flex-1 lg:flex-none font-black text-[10px] uppercase tracking-widest h-9 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 transition-all">
+                                                {t('common.clearAll')}
                                             </Button>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <div className="max-h-[500px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                                    <div className="min-h-[400px] max-h-[600px] overflow-y-auto divide-y divide-border bg-card/20 custom-scrollbar">
                                         {filteredStudents.length > 0 ? (
                                             filteredStudents.map((student) => {
                                                 const currentIds = Array.isArray(data.student_ids) ? data.student_ids : [];
@@ -210,27 +213,27 @@ export default function AssignStudents({ exam, students, groups }: Props) {
                                                     <div
                                                         key={student.id}
                                                         className={cn(
-                                                            "flex items-center justify-between px-8 py-4 transition-all group",
-                                                            isSelected ? "bg-indigo-50/50 dark:bg-indigo-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                                                            "flex items-center justify-between px-6 py-4 sm:px-8 transition-all group",
+                                                            isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-accent/50"
                                                         )}
                                                     >
                                                         <label className="flex items-center gap-4 flex-1 cursor-pointer" htmlFor={`student-${student.id}`}>
                                                             <div className={cn(
-                                                                "flex size-10 items-center justify-center rounded-xl font-bold transition-all duration-300 border-2",
+                                                                "flex size-10 shrink-0 items-center justify-center rounded-xl font-black text-sm transition-all duration-300 border-2",
                                                                 isSelected 
-                                                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200" 
-                                                                    : "bg-white dark:bg-slate-800 border-slate-200 text-slate-400 group-hover:border-indigo-300"
+                                                                    ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                                                                    : "bg-muted border-border text-muted-foreground group-hover:border-primary/50 shadow-sm"
                                                             )}>
                                                                 {isSelected ? <CheckIcon className="size-5" /> : student.name.charAt(0)}
                                                             </div>
-                                                            <div>
+                                                            <div className="min-w-0 pr-4">
                                                                 <p className={cn(
-                                                                    "font-bold tracking-tight transition-colors",
-                                                                    isSelected ? "text-indigo-900 dark:text-indigo-100" : "text-slate-700 dark:text-slate-300"
+                                                                    "font-black tracking-tight transition-colors truncate text-sm sm:text-base",
+                                                                    isSelected ? "text-primary" : "text-foreground"
                                                                 )}>
                                                                     {student.name}
                                                                 </p>
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">
                                                                     {student.email}
                                                                 </p>
                                                             </div>
@@ -239,15 +242,15 @@ export default function AssignStudents({ exam, students, groups }: Props) {
                                                             id={`student-${student.id}`}
                                                             checked={isSelected}
                                                             onCheckedChange={() => toggleStudent(student.id)}
-                                                            className="rounded-md border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                                                            className="rounded-lg h-6 w-6 border-2 border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary transition-all shadow-sm"
                                                         />
                                                     </div>
                                                 );
                                             })
                                         ) : (
-                                            <div className="py-20 text-center flex flex-col items-center">
-                                                <UsersIcon className="size-12 text-slate-200 mb-4" />
-                                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No students found matching your search</p>
+                                            <div className="py-24 text-center flex flex-col items-center opacity-40">
+                                                <UsersIcon className="size-16 text-muted-foreground mb-4" />
+                                                <p className="text-muted-foreground font-black uppercase tracking-widest text-xs italic">{t('common.noResults')}</p>
                                             </div>
                                         )}
                                     </div>
@@ -256,26 +259,28 @@ export default function AssignStudents({ exam, students, groups }: Props) {
                         </TabsContent>
 
                         <TabsContent value="bulk" className="mt-0 focus-visible:ring-0">
-                            <Card className="rounded-2xl border-none shadow-lg overflow-hidden">
-                                <CardHeader className="bg-slate-50 dark:bg-slate-900 border-b px-8 py-6">
-                                    <CardTitle className="text-lg font-black uppercase tracking-tighter">Bulk Email Import</CardTitle>
-                                    <CardDescription className="text-xs font-bold uppercase tracking-widest">Paste a list of student emails below</CardDescription>
+                            <Card className="rounded-[2.5rem] border border-border shadow-xl overflow-hidden bg-card/40 backdrop-blur-md">
+                                <CardHeader className="bg-muted/50 border-b border-border px-6 py-6 sm:px-8">
+                                    <CardTitle className="text-lg font-black uppercase tracking-tighter italic text-foreground">{t('exams.assign.bulk.title')}</CardTitle>
+                                    <CardDescription className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">{t('exams.assign.bulk.description')}</CardDescription>
                                 </CardHeader>
-                                <CardContent className="p-8 space-y-6">
-                                    <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-100 dark:border-blue-800 flex gap-3">
-                                        <InfoIcon className="size-5 text-blue-600 shrink-0" />
-                                        <p className="text-xs font-medium text-blue-800 dark:text-blue-300 leading-relaxed">
-                                            Enter emails separated by commas, spaces, or new lines. The system will automatically match them to existing student accounts and add them to the selection.
+                                <CardContent className="p-6 sm:p-8 space-y-8">
+                                    <div className="rounded-2xl bg-primary/5 p-5 border border-primary/20 flex gap-4 transition-all">
+                                        <div className="h-10 w-10 rounded-xl bg-card flex items-center justify-center shrink-0 shadow-sm border border-primary/20">
+                                            <InfoIcon className="size-5 text-primary" />
+                                        </div>
+                                        <p className="text-xs font-bold text-foreground leading-relaxed italic uppercase tracking-tight">
+                                            {t('exams.assign.bulk.notice')}
                                         </p>
                                     </div>
                                     
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Email List</Label>
+                                    <div className="space-y-3">
+                                        <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground pl-1">{t('exams.assign.bulk.label')}</Label>
                                         <textarea
                                             value={data.emails}
                                             onChange={(e) => setData('emails', e.target.value)}
                                             placeholder="student1@example.com, student2@example.com..."
-                                            className="min-h-[250px] w-full rounded-2xl border-2 border-slate-100 dark:border-slate-800 p-6 text-sm font-medium focus:border-indigo-500 focus:ring-0 transition-all bg-slate-50/50 dark:bg-slate-900/50"
+                                            className="min-h-[300px] w-full rounded-[2rem] border-2 border-border p-6 sm:p-8 text-sm font-bold focus:border-primary focus:ring-0 transition-all bg-background/50 text-foreground shadow-inner placeholder:text-muted-foreground/30"
                                         />
                                     </div>
                                 </CardContent>
@@ -284,33 +289,33 @@ export default function AssignStudents({ exam, students, groups }: Props) {
                     </Tabs>
 
                     {/* Floating Bottom Action Bar */}
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-50">
-                        <div className="bg-white dark:bg-slate-900 border shadow-2xl rounded-2xl p-4 flex items-center justify-between gap-6 backdrop-blur-md bg-opacity-90">
-                            <div className="flex items-center gap-3 pl-2">
-                                <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-                                    <UserPlusIcon className="size-5" />
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50">
+                        <div className="bg-background/95 dark:bg-card/95 backdrop-blur-xl text-foreground border border-border shadow-2xl rounded-[2rem] p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-6 ring-1 ring-border shadow-primary/10">
+                            <div className="flex items-center gap-3 sm:gap-4 pl-1 sm:pl-2">
+                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/20">
+                                    <UserPlusIcon className="size-5 sm:size-6" />
                                 </div>
-                                <div>
-                                    <p className="text-sm font-black tracking-tight">{(Array.isArray(data.student_ids) ? data.student_ids : []).length} Selected</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Students to be assigned</p>
+                                <div className="hidden sm:block">
+                                    <p className="text-lg sm:text-xl font-black tracking-tighter italic leading-none mb-0.5">{(Array.isArray(data.student_ids) ? data.student_ids : []).length}</p>
+                                    <p className="text-[8px] sm:text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">{t('exams.assign.selected')}</p>
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 sm:gap-2 pr-1 sm:pr-2">
                                 <Button
                                     variant="ghost"
                                     type="button"
                                     asChild
-                                    className="font-bold text-xs uppercase tracking-widest"
+                                    className="font-black text-[9px] sm:text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-accent transition-colors h-10 sm:h-11 px-3 sm:px-4 rounded-xl"
                                 >
-                                    <Link href={`/exams/${exam.id}`}>Cancel</Link>
+                                    <Link href={`/exams/${exam.id}`}>{t('common.cancel')}</Link>
                                 </Button>
                                 <Button
                                     type="submit"
                                     disabled={processing || !hasChanges}
-                                    className="px-8 font-black uppercase tracking-widest text-xs h-11 shadow-lg shadow-indigo-500/25 bg-indigo-600 hover:bg-indigo-700"
+                                    className="px-4 sm:px-8 font-black uppercase tracking-widest text-[10px] sm:text-[11px] h-10 sm:h-11 rounded-xl sm:rounded-2xl shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50"
                                 >
-                                    {processing ? 'Processing...' : 'Save Assignments'}
+                                    {processing ? t('common.loading') : t('exams.assign.save')}
                                 </Button>
                             </div>
                         </div>
