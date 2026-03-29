@@ -14,6 +14,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { useLanguageStandalone } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
 import type {
     BreadcrumbItem,
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export default function StudentExamResults({ exam, attempt }: Props) {
+    const { t } = useLanguageStandalone();
     const passed = exam.passing_score
         ? (attempt.score || 0) >= exam.passing_score
         : null;
@@ -42,15 +44,15 @@ export default function StudentExamResults({ exam, attempt }: Props) {
         attempt.answers?.find((a) => a.question_id === questionId);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'My Exams', href: '/student/exams' },
+        { title: t('common.dashboard'), href: '/dashboard' },
+        { title: t('student.exams.title'), href: '/student/exams' },
         { title: exam.title, href: `/student/exams/${exam.id}` },
-        { title: 'Results', href: `/student/exams/${exam.id}/results` },
+        { title: t('dashboard.results'), href: `/student/exams/${exam.id}/results` },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Results: ${exam.title}`} />
+            <Head title={`${t('dashboard.results')}: ${exam.title}`} />
             <div className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
                 {/* Header */}
                 <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-center text-white">
@@ -63,7 +65,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                     : '—'}
                                 %
                             </p>
-                            <p className="text-sm opacity-90">Your Score</p>
+                            <p className="text-sm opacity-90">{t('student.results.yourScore')}</p>
                         </div>
                         {passed !== null && (
                             <Badge
@@ -77,12 +79,12 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                 {passed ? (
                                     <>
                                         <CheckCircleIcon className="size-4" />
-                                        Passed
+                                        {t('student.results.passed')}
                                     </>
                                 ) : (
                                     <>
                                         <XCircleIcon className="size-4" />
-                                        Failed
+                                        {t('student.results.failed')}
                                     </>
                                 )}
                             </Badge>
@@ -93,10 +95,10 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                 {/* Summary */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Attempt Summary</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('student.results.attemptSummary')}</CardTitle>
                         {attempt.penalty_points && (
                             <Badge variant="destructive" className="animate-pulse bg-rose-600 font-bold">
-                                Penalty Applied: -{attempt.penalty_points} PTS
+                                {t('student.grade.penaltyApplied')}: -{attempt.penalty_points} PTS
                             </Badge>
                         )}
                     </CardHeader>
@@ -105,10 +107,10 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                             <div className="mb-6 rounded-lg border border-red-100 bg-red-50 p-4 dark:bg-red-950/20 dark:border-red-900/30">
                                 <div className="flex items-center gap-2 text-red-800 dark:text-red-400">
                                     <AlertTriangleIcon className="size-4" />
-                                    <p className="text-sm font-bold uppercase tracking-wide">Disciplinary Deduction</p>
+                                    <p className="text-sm font-bold uppercase tracking-wide">{t('student.results.disciplinaryDeduction')}</p>
                                 </div>
                                 <p className="mt-2 text-sm text-red-700 dark:text-red-300">
-                                    A penalty of <strong>{attempt.penalty_points} points</strong> was applied to this attempt.
+                                    {t('student.results.penaltyInfo', [attempt.penalty_points])}
                                 </p>
                                 <div className="mt-3 rounded border border-red-200 bg-white/50 p-3 italic text-red-900 dark:bg-black/20 dark:text-red-200 dark:border-red-800">
                                     "{attempt.penalty_reason}"
@@ -124,7 +126,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                     : 0}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                                of {attempt.total_points} points
+                                {t('student.results.ofPoints', [attempt.total_points])}
                             </p>
                         </div>
                         <div className="rounded-lg bg-muted/50 p-3 text-center">
@@ -132,7 +134,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                 {exam.passing_score}%
                             </p>
                             <p className="text-sm text-muted-foreground">
-                                Passing Score
+                                {t('student.results.passingScoreLabel')}
                             </p>
                         </div>
                         <div className="rounded-lg bg-muted/50 p-3 text-center">
@@ -153,7 +155,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                 </p>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                Minutes Taken
+                                {t('student.results.minutesTaken')}
                             </p>
                         </div>
                         <div className="rounded-lg bg-muted/50 p-3 text-center">
@@ -166,7 +168,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                 </p>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                Violations
+                                {t('monitor.table.security')}
                             </p>
                         </div>
                         </div>
@@ -177,10 +179,9 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                 {exam.show_results && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Question Review</CardTitle>
+                            <CardTitle>{t('student.results.questionReview')}</CardTitle>
                             <CardDescription>
-                                Review your answers and see the correct
-                                solutions
+                                {t('student.results.questionReviewDesc')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -238,7 +239,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                                                 variant="secondary"
                                                                 className="text-xs"
                                                             >
-                                                                Pending
+                                                                {t('exam.status.draft')}
                                                             </Badge>
                                                         )}
                                                     </div>
@@ -275,9 +276,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                                                         <span className="flex items-center gap-2">
                                                                             {wasSelected && (
                                                                                 <span className="text-xs font-medium">
-                                                                                    Your
-                                                                                    answer
-                                                                                    →
+                                                                                    {t('student.grade.yourAnswer')} →
                                                                                 </span>
                                                                             )}
                                                                             {
@@ -297,14 +296,14 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                                     <div className="mt-3 text-sm">
                                                         <p>
                                                             <strong>
-                                                                Your answer:
+                                                                {t('student.grade.yourAnswer')}:
                                                             </strong>{' '}
                                                             {answer?.text_answer ||
-                                                                'Not answered'}
+                                                                t('student.results.notAnswered')}
                                                         </p>
                                                         <p className="text-emerald-600">
                                                             <strong>
-                                                                Correct answer:
+                                                                {t('student.grade.correctAnswer')}:
                                                             </strong>{' '}
                                                             {
                                                                 question.correct_answer
@@ -315,18 +314,17 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                                     <div className="mt-3 space-y-2 text-sm">
                                                         <div>
                                                             <strong>
-                                                                Your answer:
+                                                                {t('student.grade.yourAnswer')}:
                                                             </strong>
                                                             <p className="mt-1 rounded bg-muted p-2">
                                                                 {answer?.text_answer ||
-                                                                    'Not answered'}
+                                                                    t('student.results.notAnswered')}
                                                             </p>
                                                         </div>
                                                         {answer?.instructor_feedback && (
                                                             <div>
                                                                 <strong>
-                                                                    Instructor
-                                                                    feedback:
+                                                                    {t('student.grade.feedback')}:
                                                                 </strong>
                                                                 <p className="mt-1 rounded bg-blue-50 p-2 dark:bg-blue-950/30">
                                                                     {
@@ -348,7 +346,7 @@ export default function StudentExamResults({ exam, attempt }: Props) {
 
                 <div className="flex justify-center">
                     <Button variant="outline" asChild>
-                        <Link href="/student/exams">Back to My Exams</Link>
+                        <Link href="/student/exams">{t('student.results.backToExams')}</Link>
                     </Button>
                 </div>
             </div>

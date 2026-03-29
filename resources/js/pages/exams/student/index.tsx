@@ -253,7 +253,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                                 <span className="text-sm font-black text-emerald-600/50">%</span>
                                                             </div>
                                                             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                                                                Final Score
+                                                                {t('grading.review.sidebar.score')}
                                                             </p>
                                                         </>
                                                     ) : (

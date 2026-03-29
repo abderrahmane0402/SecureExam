@@ -109,7 +109,7 @@ export default function MyResults({ attempts = [] }: Props) {
                                                         "uppercase text-[9px] font-black px-1.5 h-4 tracking-tighter",
                                                         passed ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/30" : "bg-rose-500/20 text-rose-600 border-rose-500/30"
                                                     )}>
-                                                        {passed ? 'PASSED' : 'FAILED'}
+                                                        {passed ? t('student.results.passed').toUpperCase() : t('student.results.failed').toUpperCase()}
                                                     </Badge>
                                                 </div>
                                                 

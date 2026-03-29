@@ -137,7 +137,7 @@ export default function TakeExam({
             // Show premium security toast warning
             toast.error(t(`violation.${type}` as any) || type.replace(/_/g, ' '), {
                 icon: <ShieldAlertIcon className="size-5 text-destructive" />,
-                description: `Security Warning! Attempts: ${count}/5`,
+                description: `${t('exam.take.securityWarning')} ${t('exam.take.securityAttempts', [count, 5])}`,
                 duration: 6000,
             });
         },
@@ -169,7 +169,7 @@ export default function TakeExam({
     useEcho(`exam-room.${exam.id}`, '.TeacherMessageBroadcast', (e: any) => {
         toast.info(e.message, {
             icon: <MailIcon className="size-5 text-blue-600" />,
-            description: `From Instructor: ${e.teacher_name}`,
+            description: t('exam.take.fromInstructor', [e.teacher_name]),
             duration: Infinity, // Keep it until student dismisses it
         });
     });
@@ -185,8 +185,8 @@ export default function TakeExam({
             if (e.is_paused) {
                 exitFullscreen();
             } else {
-                toast.info('Exam Resumed', {
-                    description: 'The instructor has resumed your exam session.',
+                toast.info(t('exam.take.resumed.title'), {
+                    description: t('exam.take.resumed.desc'),
                 });
             }
         }
@@ -196,8 +196,8 @@ export default function TakeExam({
     useEcho(`exam-room.${exam.id}`, '.ExamTimeExtended', (e: any) => {
         if (e.attempt_id == attempt.id) {
             setTimeRemaining(e.new_remaining_time);
-            toast.success('Time Extended! 🎁', {
-                description: 'The instructor has granted you extra time for this exam.',
+            toast.success(t('exam.take.timeExtended.title'), {
+                description: t('exam.take.timeExtended.desc'),
                 icon: <ClockIcon className="size-5 text-emerald-600" />,
             });
         }
@@ -376,7 +376,7 @@ export default function TakeExam({
                 <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
                     <Loader2Icon className="size-16 animate-spin text-primary mb-6" />
                     <h1 className="text-3xl font-black mb-2">{t('exam.take.submitting')}...</h1>
-                    <p className="text-muted-foreground font-medium">Please wait while your answers are securely saved...</p>
+                    <p className="text-muted-foreground font-medium">{t('exam.take.submitting.desc')}</p>
                 </div>
             </>
         );
@@ -431,7 +431,7 @@ export default function TakeExam({
                                     {t('exam.take.start').toUpperCase()}
                                 </Button>
                                 <p className="mt-4 text-center text-[11px] text-slate-400 uppercase font-black tracking-widest">
-                                    Entering Fullscreen Mode
+                                    {t('exam.take.enteringMode')}
                                 </p>
                             </div>
                         </CardContent>
@@ -449,13 +449,13 @@ export default function TakeExam({
                     <div className="mb-8 rounded-full bg-amber-500/20 p-6 ring-1 ring-amber-500/50">
                         <PauseIcon className="size-16 text-amber-500 animate-pulse" />
                     </div>
-                    <h2 className="text-4xl font-black tracking-tight uppercase mb-4">Exam Paused</h2>
+                    <h2 className="text-4xl font-black tracking-tight uppercase mb-4">{t('exam.take.paused.title')}</h2>
                     <p className="text-xl text-muted-foreground max-w-lg font-medium leading-relaxed mb-8">
-                        The instructor has temporarily paused your exam session. Please wait for further instructions.
+                        {t('exam.take.paused.desc')}
                     </p>
                     <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-muted-foreground bg-muted/20 px-6 py-3 rounded-2xl border border-border italic">
                         <div className="size-2 rounded-full bg-emerald-500 animate-ping" />
-                        Awaiting Instructor Signal...
+                        {t('exam.take.paused.awaiting')}
                     </div>
                 </div>
             </>
@@ -538,7 +538,7 @@ export default function TakeExam({
                                 {reloadCountdown !== null && (
                                     <div className="rounded-xl bg-red-600 p-4 text-white text-center shadow-lg animate-pulse border-2 border-red-400">
                                         <p className="text-xs uppercase font-black tracking-widest opacity-80 mb-1">
-                                            Security Submission Imminent
+                                            {t('exam.take.securityImminent')}
                                         </p>
                                         <p className="text-xl font-black">
                                             {t('exam.take.returnWithin', [reloadCountdown]).toUpperCase()}
@@ -577,7 +577,7 @@ export default function TakeExam({
                                     </div>
                                 )}
                                 {saveError && (
-                                    <div className="flex size-5 items-center justify-center text-rose-500" title="Error saving">
+                                    <div className="flex size-5 items-center justify-center text-rose-500" title={t('exam.take.errorSaving')}>
                                         <AlertTriangleIcon className="size-4" />
                                     </div>
                                 )}
@@ -823,7 +823,7 @@ export default function TakeExam({
                                                         className="size-4"
                                                     />
                                                     <span className="font-medium capitalize">
-                                                        {value}
+                                                        {t(`exams.questions.${value}` as any)}
                                                     </span>
                                                 </label>
                                             ))}
@@ -915,7 +915,7 @@ export default function TakeExam({
 
                         <div className="flex-1 flex flex-col items-center justify-center -mt-1">
                             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">
-                                Question {currentIndex + 1} of {questions.length}
+                                {t('exam.take.questionStatus', [currentIndex + 1, questions.length])}
                             </div>
                             <div className="flex items-center gap-1.5 overflow-hidden w-full max-w-[100px] h-1.5 bg-muted rounded-full">
                                 {questions.map((_, i) => (

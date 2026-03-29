@@ -111,7 +111,7 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                     "font-black uppercase text-[10px] px-3 h-5 tracking-widest",
                                     passed ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
                                 )}>
-                                    {passed ? 'PASSED' : 'FAILED'}
+                                    {passed ? t('student.results.passed').toUpperCase() : t('student.results.failed').toUpperCase()}
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -152,7 +152,7 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                     </span>
                                 </div>
                                 <p className="text-4xl font-black text-white">{attempt.violation_count}</p>
-                                <p className="text-[10px] font-bold text-blue-300/60 uppercase mt-1">Detected breaches</p>
+                                <p className="text-[10px] font-bold text-blue-300/60 uppercase mt-1">{t('student.grade.detectedBreaches')}</p>
                             </CardContent>
                         </Card>
 
@@ -165,7 +165,7 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                                 <AlertCircleIcon className="size-5" />
                                             </div>
                                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-200">
-                                                Penalty
+                                                {t('student.grade.penalty')}
                                             </span>
                                         </div>
                                         <Badge variant="destructive" className="bg-rose-500 text-white font-black text-[10px] uppercase">
@@ -260,10 +260,10 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                                                     <Badge key={o.id} variant="secondary" className="font-bold">
                                                                         {o.content}
                                                                     </Badge>
-                                                                )) || <span className="text-muted-foreground italic">No selection</span>}
+                                                                )) || <span className="text-muted-foreground italic">{t('student.grade.noSelection')}</span>}
                                                             </div>
                                                         ) : (
-                                                            <p className="whitespace-pre-wrap">{q.answer?.text_answer || <span className="text-muted-foreground italic">No response provided</span>}</p>
+                                                            <p className="whitespace-pre-wrap">{q.answer?.text_answer || <span className="text-muted-foreground italic">{t('student.grade.noResponse')}</span>}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -281,7 +281,7 @@ export default function GradeDetail({ exam, attempt }: Props) {
                                                                 ))}
                                                             </div>
                                                         ) : (
-                                                            <p>{q.correct_answer || 'Reference not provided'}</p>
+                                                            <p>{q.correct_answer || t('student.grade.notProvided')}</p>
                                                         )}
                                                     </div>
                                                 </div>

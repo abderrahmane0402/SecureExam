@@ -248,7 +248,7 @@ export default function GradeAttempt({
                         {attempt.penalty_points && (
                             <Badge variant="destructive" className="shrink-0 bg-rose-600 uppercase text-[10px] font-black border-none animate-pulse shadow-rose-200 shadow-lg px-1.5 sm:px-2 h-5">
                                 <BanIcon className="size-3 sm:mr-1" />
-                                <span className="hidden sm:inline">-{attempt.penalty_points}pts</span>
+                                <span className="hidden sm:inline">-{attempt.penalty_points} {t('grading.table.pts')}</span>
                                 <span className="sm:hidden">-{attempt.penalty_points}</span>
                             </Badge>
                         )}
@@ -272,7 +272,7 @@ export default function GradeAttempt({
                                         {t('grading.review.penalty.apply')}
                                     </DialogTitle>
                                     <DialogDescription className="font-bold">
-                                        Evaluate disciplinary action for this student submission.
+                                        {t('grading.review.penalty.evaluate')}
                                     </DialogDescription>
                                 </DialogHeader>
                                 
@@ -850,7 +850,7 @@ export default function GradeAttempt({
                                                                         isNoPoints ? "bg-rose-100 dark:bg-destructive/10 text-rose-800 dark:text-destructive" :
                                                                         "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400"
                                                                     )}>
-                                                                        {q.answer?.points_earned} PTS
+                                                                        {q.answer?.points_earned} {t('grading.table.pts')}
                                                                     </Badge>
                                                                 ) : (
                                                                     <Badge variant="outline" className="h-7 rounded-xl font-black text-[9px] text-slate-400 border-slate-200 border-2 uppercase px-3 italic">

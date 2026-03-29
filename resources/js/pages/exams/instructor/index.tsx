@@ -185,7 +185,7 @@ export default function ExamIndex({ exams }: Props) {
                                                 </CardTitle>
                                                 <CardDescription className="mt-1 line-clamp-2 h-10 text-muted-foreground italic font-medium text-xs leading-relaxed">
                                                     {exam.description ||
-                                                        'No description'}
+                                                        t('exams.noDescription')}
                                                 </CardDescription>
                                             </div>
                                             <div className="flex flex-col items-end gap-1.5">

@@ -496,8 +496,8 @@ export default function EditExam({ exam }: Props) {
                                                                                 </div>
                                                                             {question.type === 'true_false' && (
                                                                                  <div className="mt-4 flex gap-3">
-                                                                                     <Badge variant="outline" className={cn("px-4 py-1.5 border-2 text-xs rounded-xl transition-all", question.correct_answer === 'true' ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border text-muted-foreground")}>True</Badge>
-                                                                                     <Badge variant="outline" className={cn("px-4 py-1.5 border-2 text-xs rounded-xl transition-all", question.correct_answer === 'false' ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border text-muted-foreground")}>False</Badge>
+                                                                                     <Badge variant="outline" className={cn("px-4 py-1.5 border-2 text-xs rounded-xl transition-all", question.correct_answer === 'true' ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border text-muted-foreground")}>{t('exams.questions.true')}</Badge>
+                                                                                     <Badge variant="outline" className={cn("px-4 py-1.5 border-2 text-xs rounded-xl transition-all", question.correct_answer === 'false' ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border text-muted-foreground")}>{t('exams.questions.false')}</Badge>
                                                                                  </div>
                                                                             )}
                                                                         </div>
@@ -532,7 +532,7 @@ export default function EditExam({ exam }: Props) {
                                         {editingQuestion ? t('exams.questions.edit') : t('exams.questions.new')}
                                     </SheetTitle>
                                     <SheetDescription className="text-muted-foreground text-sm">
-                                        {editingQuestion ? 'Modify your question settings.' : 'Create a new question for your exam.'}
+                                        {editingQuestion ? t('exams.questions.edit.description') : t('exams.questions.new.description')}
                                     </SheetDescription>
                                 </div>
                             </div>

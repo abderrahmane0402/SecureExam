@@ -119,6 +119,7 @@ export default function MonitorExam({
     // Dialog States
     const [confirmingAction, setConfirmingAction] = useState<{ type: ConfirmAction; id: number } | null>(null);
     const [extendingTime, setExtendingTime] = useState<{ id: number; minutes: string } | null>(null);
+    const [extendingTimeAll, setExtendingTimeAll] = useState<{ minutes: string } | null>(null);
 
     // Real-time Live Proctoring Events
     useEcho(
@@ -216,19 +217,19 @@ export default function MonitorExam({
         
         if (type === 'reset') {
             router.post(`/exams/${exam.id}/attempts/${id}/reset`, {}, {
-                onSuccess: () => toast.success('Attempt reset successfully')
+                onSuccess: () => toast.success(t('monitor.toast.reset_success'))
             });
         } else if (type === 'delete') {
             router.delete(`/exams/${exam.id}/attempts/${id}`, {
-                onSuccess: () => toast.success('Attempt deleted permanently')
+                onSuccess: () => toast.success(t('monitor.toast.delete_success'))
             });
         } else if (type === 'clear_violations') {
             router.post(`/exams/${exam.id}/attempts/${id}/reset-violations`, {}, {
-                onSuccess: () => toast.success('Violations cleared')
+                onSuccess: () => toast.success(t('monitor.toast.clear_violations_success'))
             });
         } else if (type === 'force_submit') {
             router.post(`/exams/${exam.id}/attempts/${id}/force-submit`, {}, {
-                onSuccess: () => toast.success('Exam forced hand-in')
+                onSuccess: () => toast.success(t('monitor.toast.force_submit_success'))
             });
         }
         
@@ -243,9 +244,22 @@ export default function MonitorExam({
         router.post(`/exams/${exam.id}/attempts/${extendingTime.id}/extend-time`, {
             minutes: minutes
         }, {
-            onSuccess: () => toast.success(`Extended by ${minutes} minutes`)
+            onSuccess: () => toast.success(t('monitor.toast.extend_single_success', [minutes]))
         });
         setExtendingTime(null);
+    };
+
+    const executeExtendTimeAll = () => {
+        if (!extendingTimeAll) return;
+        const minutes = parseInt(extendingTimeAll.minutes);
+        if (isNaN(minutes) || minutes <= 0) return;
+
+        router.post(`/exams/${exam.id}/attempts/extend-time-all`, {
+            minutes: minutes
+        }, {
+            onSuccess: () => toast.success(t('monitor.toast.extend_all_success', [minutes]))
+        });
+        setExtendingTimeAll(null);
     };
 
     const handleTogglePause = (attemptId: number) => {
@@ -342,7 +356,7 @@ export default function MonitorExam({
                                 className="h-14 rounded-3xl shadow-xl bg-white/10 text-white hover:bg-white/20 border border-white/20 backdrop-blur-md font-black px-8 active:scale-95 transition-all"
                             >
                                 <ClockIcon className="mr-3 size-5 text-white" />
-                                {t('monitor.action.extend_all') || 'Extend All'}
+                                {t('monitor.action.extend_all')}
                             </Button>
                             <Button
                                 variant="secondary"
@@ -483,7 +497,7 @@ export default function MonitorExam({
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-2xl border-none ring-1 ring-border/50 bg-popover">
-                                                            <DropdownMenuLabel className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Session Management</DropdownMenuLabel>
+                                                            <DropdownMenuLabel className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">{t('monitor.session_management')}</DropdownMenuLabel>
                                                             <DropdownMenuItem onClick={() => handleTogglePause(attempt.id)} className="rounded-xl px-3 py-2.5 font-bold cursor-pointer">
                                                                 {attempt.is_paused ? (
                                                                     <PlayIcon className="mr-3 size-4 text-emerald-500" />
@@ -554,7 +568,7 @@ export default function MonitorExam({
                                                                         <div className="p-5 bg-blue-950 text-white w-72 space-y-4">
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="size-1.5 rounded-full bg-rose-400 animate-pulse" />
-                                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 italic">Security Alerts</p>
+                                                                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 italic">{t('monitor.security_alerts')}</p>
                                                                             </div>
                                                                             <div className="space-y-3">
                                                                                 {attempt.violation_logs.slice(0, 3).map((v) => (
@@ -566,7 +580,7 @@ export default function MonitorExam({
                                                                                     </div>
                                                                                 ))}
                                                                                 {violations > 3 && (
-                                                                                    <p className="text-center text-[10px] font-black text-blue-400 pt-1">+ {violations - 3} more incidents</p>
+                                                                                     <p className="text-center text-[10px] font-black text-blue-400 pt-1">{t('monitor.more_incidents', [violations - 3])}</p>
                                                                                 )}
                                                                             </div>
                                                                         </div>
@@ -576,7 +590,7 @@ export default function MonitorExam({
                                                         ) : (
                                                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/30">
                                                                 <CheckCircleIcon className="size-3.5" />
-                                                                <span>Secure</span>
+                                                                <span>{t('grading.violation.secure')}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -598,7 +612,7 @@ export default function MonitorExam({
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-2xl font-black tracking-tight text-foreground uppercase italic">{t('monitor.noActive')}</p>
-                                        <p className="text-sm text-muted-foreground max-w-sm mx-auto font-medium">Monitoring is currently active. Any new student join will trigger an instant update.</p>
+                                        <p className="text-sm text-muted-foreground max-w-sm mx-auto font-medium">{t('monitor.noActive.desc')}</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -685,7 +699,7 @@ export default function MonitorExam({
                                         </div>
                                         <div className="space-y-2">
                                             <p className="text-sm font-black text-slate-400 dark:text-blue-500 uppercase tracking-[0.3em] italic">{t('monitor.noViolations')}</p>
-                                            <p className="text-[10px] text-slate-400/50 dark:text-muted-foreground/20 font-black uppercase tracking-widest">System perimeter secure.</p>
+                                            <p className="text-[10px] text-slate-400/50 dark:text-muted-foreground/20 font-black uppercase tracking-widest">{t('monitor.secure_perimeter')}</p>
                                         </div>
                                     </div>
                                 )}
@@ -715,12 +729,12 @@ export default function MonitorExam({
                                     <table className="w-full min-w-[1000px]">
                                         <thead>
                                             <tr className="border-b dark:border-border bg-slate-50/50 dark:bg-card/40 text-left">
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">Student</th>
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground text-center">Status</th>
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">Completion</th>
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground text-center">Security</th>
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">Started At</th>
-                                                <th className="px-8 py-6 text-right text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">Actions</th>
+                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">{t('monitor.table.student')}</th>
+                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground text-center">{t('monitor.table.status')}</th>
+                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">{t('monitor.table.completion')}</th>
+                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground text-center">{t('monitor.table.security')}</th>
+                                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">{t('monitor.table.started_at')}</th>
+                                                <th className="px-8 py-6 text-right text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-foreground">{t('monitor.table.actions')}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-border">
@@ -739,7 +753,7 @@ export default function MonitorExam({
                                                     </td>
                                                     <td className="px-8 py-6 text-center">
                                                         <Badge variant={getStatusBadge(attempt.status)} className="font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg border-none shadow-sm">
-                                                            {attempt.status.replace(/_/g, ' ')}
+                                                            {t(`status.${attempt.status}` as any)}
                                                         </Badge>
                                                     </td>
                                                     <td className="px-8 py-6">
@@ -764,7 +778,7 @@ export default function MonitorExam({
                                                                 {attempt.violation_count}
                                                             </Badge>
                                                         ) : (
-                                                            <Badge variant="outline" className="border-emerald-100 bg-emerald-50/30 text-emerald-500 text-[10px] font-black px-3 py-1.5 rounded-lg">All Regular</Badge>
+                                                            <Badge variant="outline" className="border-emerald-100 bg-emerald-50/30 text-emerald-500 text-[10px] font-black px-3 py-1.5 rounded-lg">{t('monitor.all_regular')}</Badge>
                                                         )}
                                                     </td>
                                                     <td className="px-8 py-6 text-[11px] font-black text-muted-foreground/80 tabular-nums italic">
@@ -821,7 +835,7 @@ export default function MonitorExam({
                 open={confirmingAction !== null} 
                 onOpenChange={(open) => !open && setConfirmingAction(null)}
             >
-                <DialogContent className="rounded-3xl border border-border shadow-3xl max-w-sm p-8 bg-card overflow-hidden">
+                <DialogContent className="rounded-3xl border border-border shadow-3xl max-w-sm p-8 bg-card overflow-hidden text-foreground">
                     <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
                     <DialogHeader className="pt-4">
                         <DialogTitle className="text-2xl font-black italic tracking-tight text-foreground">
@@ -859,7 +873,7 @@ export default function MonitorExam({
                 </DialogContent>
             </Dialog>
 
-            {/* Extend Time Modal */}
+            {/* Extend Time Modal (Single) */}
             <Dialog 
                 open={extendingTime !== null} 
                 onOpenChange={(open) => !open && setExtendingTime(null)}
@@ -883,7 +897,7 @@ export default function MonitorExam({
                                 placeholder={t('monitor.action.extend_time.placeholder')}
                                 className="h-14 rounded-2xl bg-background border-border text-foreground font-black text-lg pl-6 pr-14 focus-visible:ring-primary shadow-sm"
                             />
-                            <div className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-[10px] uppercase text-primary">min</div>
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-[10px] uppercase text-primary">{t('monitor.minShort')}</div>
                         </div>
                     </div>
                     <DialogFooter className="flex-col sm:flex-row gap-3 pt-4">
@@ -903,30 +917,32 @@ export default function MonitorExam({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            
-            <style dangerouslySetInnerHTML={{ __html: `
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 5px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(99, 102, 241, 0.1);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-                    background: rgba(99, 102, 241, 0.3);
-                }
-            ` }} />
-        </AppLayout>
-    );
-}
-                 onChange={(e) => setExtendingTimeAll(prev => prev ? { ...prev, minutes: e.target.value } : null)}
+
+            {/* Extend Time Modal (All) */}
+            <Dialog 
+                open={extendingTimeAll !== null} 
+                onOpenChange={(open) => !open && setExtendingTimeAll(null)}
+            >
+                <DialogContent className="rounded-3xl border border-border shadow-3xl max-w-sm p-8 bg-card overflow-hidden text-foreground">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
+                    <DialogHeader className="pt-4">
+                        <DialogTitle className="text-2xl font-black italic tracking-tight text-foreground">
+                            {t('monitor.action.extend_all')}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm font-bold pt-4 text-muted-foreground leading-relaxed">
+                            {t('monitor.action.extend_all.prompt')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-6">
+                        <div className="relative">
+                            <Input
+                                type="number"
+                                value={extendingTimeAll?.minutes || ''}
+                                onChange={(e) => setExtendingTimeAll(prev => prev ? { ...prev, minutes: e.target.value } : null)}
                                 placeholder={t('monitor.action.extend_time.placeholder')}
                                 className="h-14 rounded-2xl bg-background border-border text-foreground font-black text-lg pl-6 pr-14 focus-visible:ring-primary shadow-sm"
                             />
-                            <div className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-[10px] uppercase text-primary">min</div>
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-[10px] uppercase text-primary">{t('monitor.minShort')}</div>
                         </div>
                     </div>
                     <DialogFooter className="flex-col sm:flex-row gap-3 pt-4">

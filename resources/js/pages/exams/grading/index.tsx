@@ -274,9 +274,9 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-slate-200 dark:border-white/10 shadow-xl bg-white dark:bg-slate-950">
-                                        <SelectItem value="all">Performance: {t('common.all')}</SelectItem>
-                                        <SelectItem value="pass">{t('grading.filter.passed')}</SelectItem>
-                                        <SelectItem value="fail">{t('grading.filter.failed')}</SelectItem>
+                                        <SelectItem value="all">{t('grading.filter.performance')}: {t('common.all')}</SelectItem>
+        <SelectItem value="pass">{t('grading.filter.passed')}</SelectItem>
+        <SelectItem value="fail">{t('grading.filter.failed')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                         </CardContent>
@@ -401,7 +401,7 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                                                     )}
                                                                 </div>
                                                                 <p className="text-[9px] font-black text-slate-400 uppercase leading-none">
-                                                                    {attempt.score} / {attempt.total_points} PTS
+                                                                    {attempt.score} / {attempt.total_points} {t('grading.table.pts')}
                                                                 </p>
                                                             </div>
                                                         ) : (
@@ -533,7 +533,7 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                                             {t(`violation.${log.violation_type}.desc` as any)}
                                         </p>
                                         <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-white/5 text-xs font-bold text-slate-600 dark:text-slate-400">
-                                            {log.details || 'System capture: Standard focus breach detected.'}
+                                            {log.details || t('grading.violation.standard_details')}
                                         </div>
                                     </div>
                                 ))}
@@ -541,8 +541,8 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                         ) : (
                             <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
                                 <CheckCircle2Icon className="size-16 text-emerald-500 mb-4" />
-                                <p className="text-xl font-black text-slate-400 uppercase tracking-tighter">PÉRIMITRE SÉCURISÉ</p>
-                                <p className="text-xs font-bold text-slate-400/60 uppercase tracking-widest italic mt-2">No alerts detected for this session</p>
+                                <p className="text-xl font-black text-slate-400 uppercase tracking-tighter">{t('grading.violation.secure')}</p>
+                                <p className="text-xs font-bold text-slate-400/60 uppercase tracking-widest italic mt-2">{t('grading.violation.noAlerts')}</p>
                             </div>
                         )}
                     </div>
@@ -550,7 +550,7 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
                     <div className="p-8 border-t dark:border-white/10 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
                         <Button asChild className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-900/10 font-black uppercase tracking-widest transition-all hover:scale-[1.02] group">
                             <Link href={grading.show(selectedViolations?.id || 0).url}>
-                                {t('grading.action.review')} & Penalize
+                                {t('grading.action.review_penalize')}
                                 <ArrowRightIcon className="ml-2 size-5 transition-transform group-hover:translate-x-1" />
                             </Link>
                         </Button>

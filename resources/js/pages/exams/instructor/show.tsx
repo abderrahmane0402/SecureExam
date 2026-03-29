@@ -310,7 +310,7 @@ export default function ShowExam({ exam, attempts }: Props) {
                                                 <div className="flex items-center gap-6">
                                                     {attempt.score !== null && (
                                                         <div className="text-right hidden sm:block">
-                                                            <div className="text-sm font-black text-foreground tabular-nums tracking-tighter italic">{attempt.score}/{attempt.total_points} PTS</div>
+                                                            <div className="text-sm font-black text-foreground tabular-nums tracking-tighter italic">{attempt.score}/{attempt.total_points} {t('grading.table.pts')}</div>
                                                             <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">{attempt.percentage}%</div>
                                                         </div>
                                                     )}

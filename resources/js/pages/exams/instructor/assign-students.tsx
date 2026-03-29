@@ -113,15 +113,15 @@ export default function AssignStudents({ exam, students, groups }: Props) {
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Exams', href: '/exams' },
+        { title: t('common.dashboard'), href: '/dashboard' },
+        { title: t('exams.title'), href: '/exams' },
         { title: exam.title, href: `/exams/${exam.id}` },
-        { title: 'Assign Students', href: `/exams/${exam.id}/assign` },
+        { title: t('exams.assign.breadcrumb'), href: `/exams/${exam.id}/assign` },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Assign: ${exam.title}`} />
+            <Head title={`${t('exams.assign.breadcrumb')}: ${exam.title}`} />
             
             <div className="flex flex-col gap-8 p-6 max-w-5xl mx-auto">
                 {/* Header */}
@@ -279,7 +279,7 @@ export default function AssignStudents({ exam, students, groups }: Props) {
                                         <textarea
                                             value={data.emails}
                                             onChange={(e) => setData('emails', e.target.value)}
-                                            placeholder="student1@example.com, student2@example.com..."
+                                            placeholder={t('exams.assign.bulk.placeholder')}
                                             className="min-h-[300px] w-full rounded-[2rem] border-2 border-border p-6 sm:p-8 text-sm font-bold focus:border-primary focus:ring-0 transition-all bg-background/50 text-foreground shadow-inner placeholder:text-muted-foreground/30"
                                         />
                                     </div>

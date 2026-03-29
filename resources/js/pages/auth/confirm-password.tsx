@@ -6,25 +6,28 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/password/confirm';
+import { useLanguage } from '@/hooks/use-language';
 
 export default function ConfirmPassword() {
+    const { t } = useLanguage();
+
     return (
         <AuthLayout
-            title="Confirm your password"
-            description="This is a secure area of the application. Please confirm your password before continuing."
+            title={t('auth.confirmPassword.title')}
+            description={t('auth.confirmPassword.description')}
         >
-            <Head title="Confirm password" />
+            <Head title={t('auth.confirmPassword.title')} />
 
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password">{t('common.password')}</Label>
                             <Input
                                 id="password"
                                 type="password"
                                 name="password"
-                                placeholder="Password"
+                                placeholder={t('common.password')}
                                 autoComplete="current-password"
                                 autoFocus
                             />
@@ -39,7 +42,7 @@ export default function ConfirmPassword() {
                                 data-test="confirm-password-button"
                             >
                                 {processing && <Spinner />}
-                                Confirm password
+                                {t('auth.confirmPassword.button')}
                             </Button>
                         </div>
                     </div>
