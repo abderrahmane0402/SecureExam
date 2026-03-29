@@ -7,11 +7,11 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLanguageStandalone } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
-import { useLanguageStandalone } from '@/hooks/use-language';
 import type { BreadcrumbItem } from '@/types';
 
 export default function Profile({

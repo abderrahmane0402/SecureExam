@@ -313,14 +313,14 @@ export default function MonitorExam({
             <div className="flex flex-col gap-8 p-4 md:p-8 max-w-(--breakpoint-2xl) mx-auto w-full">
                 
                 {/* Modern Header — Glassmorphic Control Panel */}
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-blue-400 dark:from-primary/20 dark:via-primary/10 dark:to-background p-8 text-white shadow-xl border border-white/10">
+                <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-indigo-700 via-blue-600 to-cyan-500 dark:from-primary/30 dark:via-primary/10 dark:to-background p-8 text-white shadow-2xl shadow-indigo-500/20 border border-white/10">
                     <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
                         <div className="space-y-3">
                             <div className="flex items-center gap-3">
-                                <div className="rounded-2xl bg-white/20 p-2.5 backdrop-blur-xl shadow-inner border border-white/10">
+                                <div className="rounded-2xl bg-white/10 p-2.5 backdrop-blur-xl shadow-xl border border-white/20">
                                     <ActivityIcon className="size-6 text-white" />
                                 </div>
-                                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-md">
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-md">
                                     <div className="size-2 rounded-full bg-emerald-400 animate-pulse" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-50 italic">
                                         {t('monitor.live')}
@@ -328,17 +328,17 @@ export default function MonitorExam({
                                 </div>
                             </div>
                             <div>
-                                <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none mb-2 italic text-white">{exam.title}</h1>
-                                <p className="text-blue-100/80 font-medium text-lg max-w-xl italic">
+                                <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none mb-2 italic text-white drop-shadow-md">{exam.title}</h1>
+                                <p className="text-blue-50 font-medium text-lg max-w-xl italic opacity-90">
                                     {t('monitor.subtitle')}
                                 </p>
                             </div>
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-4 relative z-10">
-                            <div className="flex items-center gap-4 rounded-3xl bg-white/10 px-6 py-4 backdrop-blur-md border border-white/20 shadow-xl group transition-all hover:bg-white/15">
+                            <div className="flex items-center gap-4 rounded-[1.5rem] bg-black/10 px-6 py-4 backdrop-blur-md border border-white/10 shadow-xl group transition-all hover:bg-black/20">
                                 <span className={cn(
-                                    "text-xs font-black uppercase tracking-widest transition-colors",
+                                    "text-[10px] font-black uppercase tracking-widest transition-colors",
                                     isPolling ? "text-white" : "text-white/40"
                                 )}>
                                     {t('monitor.autoRefresh')}
@@ -353,7 +353,7 @@ export default function MonitorExam({
                                 variant="secondary"
                                 size="lg"
                                 onClick={() => setExtendingTimeAll({ minutes: '10' })}
-                                className="h-14 rounded-3xl shadow-xl bg-white/10 text-white hover:bg-white/20 border border-white/20 backdrop-blur-md font-black px-8 active:scale-95 transition-all"
+                                className="h-14 rounded-[1.5rem] shadow-xl bg-white/10 text-white hover:bg-white/20 border border-white/20 backdrop-blur-md font-black px-8 active:scale-95 transition-all"
                             >
                                 <ClockIcon className="mr-3 size-5 text-white" />
                                 {t('monitor.action.extend_all')}
@@ -363,35 +363,35 @@ export default function MonitorExam({
                                 size="lg"
                                 onClick={handleRefresh}
                                 disabled={refreshing}
-                                className="h-14 rounded-3xl shadow-xl bg-white text-blue-600 hover:bg-blue-50 font-black px-8 active:scale-95 transition-all border-none"
+                                className="h-14 rounded-[1.5rem] shadow-xl bg-white text-indigo-600 hover:bg-indigo-50 font-black px-8 active:scale-95 transition-all border-none"
                             >
-                                <RefreshCwIcon className={cn("mr-3 size-5 text-blue-600", refreshing && "animate-spin")} />
+                                <RefreshCwIcon className={cn("mr-3 size-5 text-indigo-600", refreshing && "animate-spin")} />
                                 {t('monitor.refresh')}
                             </Button>
                         </div>
                     </div>
                     
                     {/* Abstract Shapes */}
-                    <div className="absolute -right-20 -top-20 size-80 rounded-full bg-blue-400/20 blur-[100px]" />
-                    <div className="absolute -left-20 -bottom-20 size-80 rounded-full bg-blue-400/10 blur-[100px]" />
+                    <div className="absolute -right-20 -top-20 size-80 rounded-full bg-cyan-400/20 blur-[100px]" />
+                    <div className="absolute -left-20 -bottom-20 size-80 rounded-full bg-indigo-400/10 blur-[100px]" />
                 </div>
 
                 {/* Stats Dashboard */}
                 <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
                     {[
-                        { label: t('monitor.totalAssigned'), value: totalAssigned, icon: UsersIcon, bg: 'bg-blue-50 dark:bg-primary/10', color: 'text-blue-600 dark:text-primary' },
-                        { label: t('monitor.inProgress'), value: inProgressCount, icon: ClockIcon, bg: 'bg-emerald-50 dark:bg-emerald-500/10', color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: t('monitor.completed'), value: completedCount, icon: CheckCircleIcon, bg: 'bg-blue-50 dark:bg-primary/10', color: 'text-blue-600 dark:text-primary' },
-                        { label: t('monitor.notStarted'), value: notStartedCount, icon: XCircleIcon, bg: 'bg-muted', color: 'text-muted-foreground' },
+                        { label: t('monitor.totalAssigned'), value: totalAssigned, icon: UsersIcon, bg: 'bg-[radial-gradient(at_center,_var(--color-primary)_/_0.2,_transparent)]', border: 'border-primary/10', color: 'text-primary' },
+                        { label: t('monitor.inProgress'), value: inProgressCount, icon: ClockIcon, bg: 'bg-[radial-gradient(at_center,_oklch(0.6_0.2_160)_/_0.2,_transparent)]', border: 'border-emerald-500/10', color: 'text-emerald-600 dark:text-emerald-400' },
+                        { label: t('monitor.completed'), value: completedCount, icon: CheckCircleIcon, bg: 'bg-[radial-gradient(at_center,_var(--color-primary)_/_0.2,_transparent)]', border: 'border-primary/10', color: 'text-primary' },
+                        { label: t('monitor.notStarted'), value: notStartedCount, icon: XCircleIcon, bg: 'bg-muted/30', border: 'border-border/50', color: 'text-muted-foreground' },
                     ].map((stat, i) => (
-                        <Card key={i} className="group border-none bg-white/50 dark:bg-card/50 backdrop-blur-sm shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 rounded-2xl overflow-hidden ring-1 ring-border/50">
+                        <Card key={i} className="group border border-border/50 bg-card/40 backdrop-blur-md shadow-lg transition-all hover:shadow-2xl hover:-translate-y-1 rounded-[2rem] overflow-hidden border-t-white/10 dark:border-t-white/5">
                             <CardContent className="p-6">
                                 <div className="flex flex-col gap-4">
                                     <div className="flex items-center justify-between">
-                                        <div className={cn("rounded-2xl p-3 shadow-inner border border-black/5 dark:border-border/50", stat.bg, stat.color)}>
+                                        <div className={cn("rounded-2xl p-3 shadow-sm border", stat.bg, stat.border, stat.color)}>
                                             <stat.icon className="size-6" />
                                         </div>
-                                        <p className="text-4xl font-black tracking-tighter tabular-nums dark:text-foreground">{stat.value}</p>
+                                        <p className="text-4xl font-black tracking-tighter tabular-nums text-foreground italic">{stat.value}</p>
                                     </div>
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
                                         {stat.label}
@@ -403,20 +403,20 @@ export default function MonitorExam({
                 </div>
 
                 {/* Broadcast Hub */}
-                <Card className="rounded-2xl border border-border/50 shadow-2xl bg-card text-foreground overflow-hidden relative group">
-                    <div className="absolute -top-12 -right-12 p-8 opacity-5 transition-transform group-hover:rotate-12 duration-700">
+                <Card className="rounded-[2.5rem] border border-border/50 shadow-2xl bg-card/40 backdrop-blur-md text-foreground overflow-hidden relative group border-t-white/10 dark:border-t-white/5">
+                    <div className="absolute -top-12 -right-12 p-8 opacity-[0.03] transition-transform group-hover:rotate-12 duration-700 pointer-events-none">
                         <SendIcon className="size-48" />
                     </div>
                     <CardContent className="p-8 md:p-10 relative z-10">
                         <div className="flex flex-col lg:flex-row items-center gap-10">
                             <div className="flex-1 space-y-3">
-                                <Badge className="bg-blue-500/20 text-blue-300 border-none font-black tracking-[0.2em] px-3 py-1 mb-2">
+                                <Badge className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none font-black tracking-[0.2em] px-3 py-1 mb-2 uppercase text-[10px]">
                                     {t('monitor.broadcast.title')}
                                 </Badge>
-                                <h3 className="text-3xl font-black tracking-tight leading-tight">
+                                <h3 className="text-3xl font-black tracking-tight leading-tight italic uppercase">
                                     {t('monitor.broadcast.subtitle')}
                                 </h3>
-                                <p className="text-blue-300/60 text-xs font-bold uppercase tracking-widest">
+                                <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest italic opacity-60">
                                     {t('monitor.broadcast.placeholder')}
                                 </p>
                             </div>
@@ -428,15 +428,15 @@ export default function MonitorExam({
                                         value={broadcastMessage}
                                         onChange={(e) => setBroadcastMessage(e.target.value)}
                                         maxLength={500}
-                                        className="h-16 bg-background border-border text-foreground placeholder:text-muted-foreground/40 rounded-2xl pl-6 pr-14 focus-visible:ring-primary text-lg transition-all"
+                                        className="h-16 bg-background/50 border-border text-foreground placeholder:text-muted-foreground/30 rounded-2xl pl-6 pr-14 focus-visible:ring-primary text-lg transition-all font-bold"
                                     />
-                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 text-blue-500 font-black text-[10px] tabular-nums">
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 text-indigo-500 font-black text-[10px] tabular-nums">
                                         {broadcastMessage.length}/500
                                     </div>
                                 </div>
                                 <Button 
                                     disabled={isBroadcasting || !broadcastMessage.trim()}
-                                    className="h-16 rounded-2xl px-10 font-black uppercase tracking-widest text-xs bg-primary dark:bg-foreground text-primary-foreground dark:text-background hover:bg-primary/90 dark:hover:bg-foreground/90 shadow-xl shadow-primary/20 dark:shadow-primary/40 active:scale-95 transition-all"
+                                    className="h-16 rounded-2xl px-10 font-black uppercase tracking-widest text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
                                 >
                                     {isBroadcasting ? t('common.loading') : t('monitor.broadcast.button')}
                                 </Button>
@@ -626,7 +626,7 @@ export default function MonitorExam({
                             {t('monitor.recentViolations')}
                         </h2>
 
-                        <Card className="max-h-[600px] lg:h-[850px] flex flex-col border-none bg-card text-foreground shadow-xl rounded-3xl overflow-hidden ring-1 ring-border/50">
+                        <Card className="max-h-[600px] lg:h-[850px] flex flex-col border-none bg-card text-foreground shadow-xl rounded-3xl overflow-hidden ring-1 ring-border/50 pt-0">
                             <CardHeader className="px-8 py-6 border-b border-slate-100 dark:border-border bg-slate-50/50 dark:bg-rose-500/5">
                                 <CardDescription className="text-[10px] font-black uppercase tracking-[0.25em] text-rose-600 dark:text-rose-400">
                                     {t('monitor.recentViolationsDesc')}

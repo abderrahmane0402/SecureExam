@@ -212,6 +212,14 @@ const translations = {
         'exams.fields.shuffle_options': 'Shuffle answer options',
         'exams.fields.show_results': 'Show results to students after submission',
         'exams.noDescription': 'No description provided',
+        'exams.create.button': 'Create Exam',
+
+        // Students
+        'students.title': 'Student Management',
+        'students.subtitle': 'Manage your student directory and group assignments.',
+        'students.import': 'Import Students',
+        'students.registered': 'Registered Students',
+        'students.registered.desc': 'View and manage all students in your system',
 
         // Questions
         'exams.questions.title': 'Questions',
@@ -354,6 +362,9 @@ const translations = {
         'common.status.correct': 'Correct',
         'common.status.incorrect': 'Incorrect',
         'common.status.partial': 'Partial',
+        'common.record': 'Record',
+        'common.records': 'Records',
+        'common.allGroups': 'All Groups',
 
         // Attempt Review
         'grading.review.title': 'Attempt Review',
@@ -794,6 +805,9 @@ const translations = {
         'common.status.correct': 'Correct',
         'common.status.incorrect': 'Incorrect',
         'common.status.partial': 'Partiel',
+        'common.record': 'Enregistrement',
+        'common.records': 'Enregistrements',
+        'common.allGroups': 'Tous les Groupes',
 
         // Auth - Login
         'auth.login.title': 'Connectez-vous à votre compte',
@@ -970,6 +984,14 @@ const translations = {
         'exams.fields.shuffle_options': 'Mélanger les options de réponse',
         'exams.fields.show_results': 'Afficher les résultats aux étudiants après la soumission',
         'exams.noDescription': 'Aucune description fournie',
+        'exams.create.button': 'Créer l\'Examen',
+
+        // Students
+        'students.title': 'Gestion des Étudiants',
+        'students.subtitle': 'Gérez votre annuaire d\'étudiants et les affectations de groupe.',
+        'students.import': 'Importer des Étudiants',
+        'students.registered': 'Étudiants Inscrits',
+        'students.registered.desc': 'Consultez et gérez tous les étudiants de votre système',
 
         // Questions
         'exams.questions.title': 'Questions',

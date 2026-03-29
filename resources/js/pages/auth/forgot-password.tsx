@@ -5,10 +5,10 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLanguage } from '@/hooks/use-language';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
-import { useLanguage } from '@/hooks/use-language';
 
 export default function ForgotPassword({ status }: { status?: string }) {
     const { t } = useLanguage();

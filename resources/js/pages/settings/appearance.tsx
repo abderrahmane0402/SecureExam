@@ -1,9 +1,9 @@
 import { Head } from '@inertiajs/react';
 import AppearanceTabs from '@/components/appearance-tabs';
 import Heading from '@/components/heading';
+import { useLanguageStandalone } from '@/hooks/use-language';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { useLanguageStandalone } from '@/hooks/use-language';
 import { edit as editAppearance } from '@/routes/appearance';
 import type { BreadcrumbItem } from '@/types';
 

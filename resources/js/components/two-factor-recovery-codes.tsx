@@ -10,8 +10,8 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { regenerateRecoveryCodes } from '@/routes/two-factor';
 import { useLanguageStandalone } from '@/hooks/use-language';
+import { regenerateRecoveryCodes } from '@/routes/two-factor';
 
 type Props = {
     recoveryCodesList: string[];

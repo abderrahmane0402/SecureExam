@@ -84,10 +84,10 @@ export default function ShowExam({ exam, attempts }: Props) {
             <Head title={exam.title} />
             <div className="flex flex-col gap-8 p-6 mx-auto max-w-7xl">
                 {/* Header */}
-                <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-blue-400 dark:from-primary/20 dark:via-primary/10 dark:to-background p-6 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between border border-white/10 relative overflow-hidden">
-                    <div className="space-y-2">
+                <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-600 to-violet-500 dark:from-primary/30 dark:via-primary/10 dark:to-background p-6 text-white shadow-2xl shadow-blue-500/20 sm:flex-row sm:items-center sm:justify-between border border-white/10 relative overflow-hidden">
+                    <div className="space-y-2 relative z-10">
                         <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-3xl font-black tracking-tight">{exam.title}</h1>
+                            <h1 className="text-3xl font-black tracking-tight drop-shadow-sm">{exam.title}</h1>
                             <Badge className="bg-white/20 font-bold text-white backdrop-blur-md border-white/10 uppercase tracking-widest text-[10px] px-2 sm:px-3">
                                 {exam.type === 'auto' ? (
                                     <>
@@ -107,7 +107,7 @@ export default function ShowExam({ exam, attempts }: Props) {
                                     "font-bold uppercase tracking-widest text-[10px] backdrop-blur-md px-2 sm:px-3",
                                     exam.is_published
                                         ? isActive
-                                            ? 'bg-emerald-400 text-emerald-950'
+                                            ? 'bg-emerald-400 text-emerald-950 shadow-[0_0_15px_-3px_rgba(52,211,153,0.5)]'
                                             : 'bg-white text-blue-600'
                                         : 'bg-amber-400 text-amber-950'
                                 )}
@@ -115,7 +115,7 @@ export default function ShowExam({ exam, attempts }: Props) {
                                 {exam.is_published ? (
                                     isActive ? (
                                         <>
-                                            <ActivityIcon className="size-3 sm:mr-1.5" />
+                                            <ActivityIcon className="size-3 sm:mr-1.5 animate-pulse" />
                                             <span className="hidden sm:inline">{t('exams.show.live_now')}</span>
                                         </>
                                     ) : (
@@ -133,17 +133,17 @@ export default function ShowExam({ exam, attempts }: Props) {
                             </Badge>
                         </div>
                         {exam.description && (
-                            <p className="max-w-2xl text-lg font-medium opacity-90 leading-relaxed line-clamp-2">
+                            <p className="max-w-2xl text-lg font-medium opacity-90 leading-relaxed line-clamp-2 italic">
                                 {exam.description}
                             </p>
                         )}
                     </div>
-                    <div className="flex shrink-0 gap-3">
+                    <div className="flex shrink-0 gap-3 relative z-10">
                         <Button
                             variant="secondary"
                             size="lg"
                             asChild
-                            className="bg-white/10 text-white hover:bg-white/20 border-white/20"
+                            className="bg-white/10 text-white hover:bg-white/20 border-white/20 backdrop-blur-md shadow-xl"
                         >
                             <Link href={`/exams/${exam.id}/edit`}>
                                 <SettingsIcon className="mr-2 size-5" />
@@ -151,15 +151,17 @@ export default function ShowExam({ exam, attempts }: Props) {
                             </Link>
                         </Button>
                     </div>
+                    {/* Decorative element */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                 </div>
 
                 {/* Command Center Action Cards */}
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {/* Action Card: Configure */}
                     <Link href={`/exams/${exam.id}/edit`} className="group">
-                        <Card className="h-full transition-all duration-300 rounded-3xl border border-border group-hover:border-primary/50 group-hover:-translate-y-1 bg-card/40 backdrop-blur-md shadow-lg">
+                        <Card className="h-full transition-all duration-300 rounded-3xl border border-border group-hover:border-primary/50 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-primary/20 bg-card/40 backdrop-blur-md shadow-lg">
                             <CardHeader className="pb-2 px-6 pt-6">
-                                <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-sm">
+                                <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[radial-gradient(at_center,_var(--color-primary)_/_0.2,_transparent)] text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-sm border border-primary/10">
                                     <FileTextIcon className="size-6" />
                                 </div>
                                 <CardTitle className="text-lg font-black text-foreground uppercase tracking-tight">{t('exams.show.configure')}</CardTitle>
@@ -176,9 +178,9 @@ export default function ShowExam({ exam, attempts }: Props) {
 
                     {/* Action Card: Access */}
                     <Link href={`/exams/${exam.id}/assign`} className="group">
-                        <Card className="h-full transition-all duration-300 rounded-3xl border border-border group-hover:border-primary/50 group-hover:-translate-y-1 bg-card/40 backdrop-blur-md shadow-lg">
+                        <Card className="h-full transition-all duration-300 rounded-3xl border border-border group-hover:border-primary/50 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-primary/20 bg-card/40 backdrop-blur-md shadow-lg">
                             <CardHeader className="pb-2 px-6 pt-6">
-                                <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-sm">
+                                <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[radial-gradient(at_center,_var(--color-primary)_/_0.2,_transparent)] text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-sm border border-primary/10">
                                     <UsersIcon className="size-6" />
                                 </div>
                                 <CardTitle className="text-lg font-black text-foreground uppercase tracking-tight">{t('exams.show.access')}</CardTitle>
@@ -195,9 +197,9 @@ export default function ShowExam({ exam, attempts }: Props) {
 
                     {/* Action Card: Proctor */}
                     <Link href={`/exams/${exam.id}/monitor`} className="group">
-                        <Card className="h-full transition-all duration-300 rounded-3xl border border-border group-hover:border-rose-500/50 group-hover:-translate-y-1 bg-card/40 backdrop-blur-md shadow-lg">
+                        <Card className="h-full transition-all duration-300 rounded-3xl border border-border group-hover:border-rose-500/50 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-rose-500/20 bg-card/40 backdrop-blur-md shadow-lg">
                             <CardHeader className="pb-2 px-6 pt-6">
-                                <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                                <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[radial-gradient(at_center,_oklch(0.55_0.18_25)_/_0.2,_transparent)] text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-all duration-500 shadow-sm border border-rose-500/10">
                                     <MonitorIcon className="size-6" />
                                 </div>
                                 <CardTitle className="text-lg font-black text-foreground uppercase tracking-tight">{t('exams.show.proctor')}</CardTitle>
@@ -215,15 +217,17 @@ export default function ShowExam({ exam, attempts }: Props) {
                     {/* Action Card: Grading */}
                     <Link href={`/grading/${exam.id}`} className="group">
                         <Card className={cn(
-                            "h-full transition-all duration-300 rounded-3xl border border-border group-hover:-translate-y-1 bg-card/40 backdrop-blur-md shadow-lg",
-                            pendingReviews > 0 ? "border-amber-500/50 bg-amber-500/5" : "hover:border-emerald-500/50"
+                            "h-full transition-all duration-300 rounded-3xl border border-border group-hover:-translate-y-1 bg-card/40 backdrop-blur-md shadow-lg group-hover:shadow-2xl",
+                            pendingReviews > 0 
+                                ? "border-amber-500/50 bg-amber-500/5 group-hover:shadow-amber-500/20" 
+                                : "hover:border-emerald-500/50 group-hover:shadow-emerald-500/20"
                         )}>
                             <CardHeader className="pb-2 px-6 pt-6">
                                 <div className={cn(
-                                    "mb-3 flex size-12 items-center justify-center rounded-2xl transition-all duration-300 shadow-sm",
+                                    "mb-3 flex size-12 items-center justify-center rounded-2xl transition-all duration-500 shadow-sm border",
                                     pendingReviews > 0
-                                        ? "bg-amber-500/10 text-amber-600 group-hover:bg-amber-600 group-hover:text-white"
-                                        : "bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white"
+                                        ? "bg-[radial-gradient(at_center,_oklch(0.7_0.15_80)_/_0.2,_transparent)] text-amber-600 group-hover:bg-amber-600 group-hover:text-white border-amber-500/10"
+                                        : "bg-[radial-gradient(at_center,_oklch(0.6_0.2_160)_/_0.2,_transparent)] text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white border-emerald-500/10"
                                 )}>
                                     <ClipboardCheckIcon className="size-6" />
                                 </div>
@@ -246,8 +250,8 @@ export default function ShowExam({ exam, attempts }: Props) {
                 <div className="grid gap-8 lg:grid-cols-3">
                     {/* Main Content: Attempts List */}
                     <div className="lg:col-span-2 space-y-6">
-                        <Card className="rounded-3xl overflow-hidden border border-border shadow-xl bg-card/40 backdrop-blur-md">
-                            <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/50 pb-6 pt-8 px-6">
+                        <Card className="rounded-3xl overflow-hidden border border-border/50 shadow-xl bg-card/40 backdrop-blur-md pt-0 border-t-white/10 dark:border-t-white/5">
+                            <CardHeader className="flex flex-row items-center justify-between border-b border-primary/10 bg-primary/5 dark:bg-primary/10 pb-6 pt-8 px-6">
                                 <div>
                                     <CardTitle className="text-xl font-black text-foreground uppercase tracking-tight italic">{t('exams.show.recent')}</CardTitle>
                                     <CardDescription className="text-muted-foreground font-bold text-xs uppercase tracking-widest">{t('exams.show.recent.desc')}</CardDescription>
@@ -269,7 +273,7 @@ export default function ShowExam({ exam, attempts }: Props) {
                                         <p className="text-sm text-muted-foreground font-medium max-w-xs">{t('exams.show.none.desc')}</p>
                                     </div>
                                 ) : (
-                                    <div className="divide-y divide-border">
+                                    <div className="divide-y divide-border/50">
                                         {attempts.map((attempt) => (
                                             <div
                                                 key={attempt.id}
@@ -335,14 +339,14 @@ export default function ShowExam({ exam, attempts }: Props) {
 
                     {/* Sidebar Info */}
                     <div className="space-y-6">
-                        <Card className="rounded-3xl border border-border shadow-xl bg-card/40 backdrop-blur-md overflow-hidden">
-                            <CardHeader className="pb-2 pt-8 px-6 bg-muted/30 border-b border-border/50">
-                                <CardTitle className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-black italic">{t('exams.show.stats')}</CardTitle>
+                        <Card className="rounded-3xl border border-border shadow-xl bg-card/40 backdrop-blur-md overflow-hidden pt-0 border-t-white/10 dark:border-t-white/5">
+                            <CardHeader className="pb-4 pt-8 px-6 bg-primary/5 dark:bg-primary/10 border-b border-primary/10">
+                                <CardTitle className="text-[10px] uppercase tracking-[0.2em] text-primary font-black italic">{t('exams.show.stats')}</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4 pt-6 px-6 pb-8">
                                 <div className="flex items-center justify-between border-b border-border/50 pb-3 group">
                                     <div className="flex items-center gap-3 text-sm font-black text-foreground uppercase tracking-tight group-hover:text-primary transition-colors">
-                                        <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                                        <div className="p-2 rounded-xl bg-[radial-gradient(at_center,_var(--color-primary)_/_0.2,_transparent)] text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all border border-primary/10">
                                             <FileTextIcon className="size-4" />
                                         </div>
                                         {t('exams.show.points_total')}
@@ -351,7 +355,7 @@ export default function ShowExam({ exam, attempts }: Props) {
                                 </div>
                                 <div className="flex items-center justify-between border-b border-border/50 pb-3 group">
                                     <div className="flex items-center gap-3 text-sm font-black text-foreground uppercase tracking-tight group-hover:text-primary transition-colors">
-                                        <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                                        <div className="p-2 rounded-xl bg-[radial-gradient(at_center,_var(--color-primary)_/_0.2,_transparent)] text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all border border-primary/10">
                                             <UsersIcon className="size-4" />
                                         </div>
                                         {t('exams.show.assigned')}
@@ -360,7 +364,7 @@ export default function ShowExam({ exam, attempts }: Props) {
                                 </div>
                                 <div className="flex items-center justify-between border-b border-border/50 pb-3 group">
                                     <div className="flex items-center gap-3 text-sm font-black text-foreground uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
-                                        <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                        <div className="p-2 rounded-xl bg-[radial-gradient(at_center,_oklch(0.6_0.2_160)_/_0.2,_transparent)] text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all border border-emerald-500/10">
                                             <ClipboardCheckIcon className="size-4" />
                                         </div>
                                         {t('exams.show.success_score')}
@@ -369,7 +373,7 @@ export default function ShowExam({ exam, attempts }: Props) {
                                 </div>
                                 <div className="flex items-center justify-between group">
                                     <div className="flex items-center gap-3 text-sm font-black text-foreground uppercase tracking-tight group-hover:text-amber-600 transition-colors">
-                                        <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                                        <div className="p-2 rounded-xl bg-[radial-gradient(at_center,_oklch(0.7_0.15_80)_/_0.2,_transparent)] text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all border border-amber-500/10">
                                             <ClockIcon className="size-4" />
                                         </div>
                                         {t('exams.show.duration')}
@@ -379,20 +383,20 @@ export default function ShowExam({ exam, attempts }: Props) {
                             </CardContent>
                         </Card>
 
-                        <Card className="rounded-3xl border border-border shadow-xl bg-card/40 backdrop-blur-md overflow-hidden">
-                            <CardHeader className="pb-2 pt-8 px-6 bg-muted/30 border-b border-border/50">
-                                <CardTitle className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-black italic">{t('exams.show.availability')}</CardTitle>
+                        <Card className="rounded-3xl border border-border shadow-xl bg-card/40 backdrop-blur-md overflow-hidden pt-0 border-t-white/10 dark:border-t-white/5">
+                            <CardHeader className="pb-4 pt-8 px-6 bg-primary/5 dark:bg-primary/10 border-b border-primary/10">
+                                <CardTitle className="text-[10px] uppercase tracking-[0.2em] text-primary font-black italic">{t('exams.show.availability')}</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-6 px-6 pb-8 space-y-5">
                                 <div className="group">
                                     <div className="text-[10px] font-black text-muted-foreground uppercase mb-2 group-hover:text-primary transition-colors tracking-widest">{t('exams.show.starts')}</div>
-                                    <div className="text-sm font-bold bg-muted p-4 rounded-2xl border border-border shadow-inner transition-all duration-300 text-foreground tabular-nums italic group-hover:border-primary/30">
+                                    <div className="text-sm font-bold bg-muted/50 p-4 rounded-2xl border border-border/50 shadow-inner transition-all duration-300 text-foreground tabular-nums italic group-hover:border-primary/30 group-hover:bg-primary/5">
                                         {formatDate(exam.start_time)}
                                     </div>
                                 </div>
                                 <div className="group">
                                     <div className="text-[10px] font-black text-muted-foreground uppercase mb-2 group-hover:text-rose-600 transition-colors tracking-widest">{t('exams.show.ends')}</div>
-                                    <div className="text-sm font-bold bg-muted p-4 rounded-2xl border border-border shadow-inner transition-all duration-300 text-foreground tabular-nums italic group-hover:border-rose-300">
+                                    <div className="text-sm font-bold bg-muted/50 p-4 rounded-2xl border border-border/50 shadow-inner transition-all duration-300 text-foreground tabular-nums italic group-hover:border-rose-300 group-hover:bg-rose-500/5">
                                         {formatDate(exam.end_time)}
                                     </div>
                                 </div>
