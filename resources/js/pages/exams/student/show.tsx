@@ -64,11 +64,11 @@ export default function StudentExamShow({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={exam.title} />
-            <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-center text-white">
-                    <h1 className="text-2xl font-bold">{exam.title}</h1>
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
+                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-5 sm:p-6 text-center text-white">
+                    <h1 className="text-xl sm:text-2xl font-bold break-words">{exam.title}</h1>
                     {exam.description && (
-                        <p className="mt-2 opacity-90">{exam.description}</p>
+                        <p className="mt-2 opacity-90 break-words text-sm sm:text-base">{exam.description}</p>
                     )}
                 </div>
 
@@ -162,9 +162,9 @@ export default function StudentExamShow({
                                 {attempts.map((attempt) => (
                                     <div
                                         key={attempt.id}
-                                        className="flex items-center justify-between rounded-lg border p-3"
+                                        className="flex flex-wrap items-start justify-between gap-2 rounded-lg border p-3"
                                     >
-                                        <div>
+                                        <div className="min-w-0">
                                             <p className="font-medium">
                                                 {t('student.exam.attemptNumber')} {attempt.attempt_number}
                                             </p>
@@ -172,7 +172,7 @@ export default function StudentExamShow({
                                                 {formatDate(attempt.started_at)}
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
                                             {attempt.violation_count !== undefined && attempt.violation_count > 0 && (
                                                 <Badge
                                                     variant="destructive"

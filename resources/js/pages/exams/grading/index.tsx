@@ -15,6 +15,7 @@ import {
     AlertTriangleIcon,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -165,6 +166,10 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
         setIsBulkGrading(true);
         router.post(grading.bulkAutoGrade(exam.id).url, { attempt_ids: selectedIds }, {
             preserveScroll: true,
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                toast.error(t('common.error'), { description: firstError });
+            },
             onFinish: () => {
                 setIsBulkGrading(false);
                 setSelectedIds([]);
@@ -174,9 +179,25 @@ export default function GradingIndex({ exam, attempts, stats }: Props) {
 
     const handleBulkPublish = () => {
         if (!selectedIds.length) return;
+
+        // Check for ungraded attempts in selection
+        const selectedAttempts = attempts.filter(a => selectedIds.includes(a.id));
+        const ungradedCount = selectedAttempts.filter(a => a.status !== 'graded').length;
+
+        if (ungradedCount > 0) {
+            toast.error(t('grading.bulk.error.ungraded_title'), {
+                description: t('grading.bulk.error.ungraded_desc', [ungradedCount]),
+            });
+            return;
+        }
+
         setIsBulkPublishing(true);
         router.post(grading.bulkPublish(exam.id).url, { attempt_ids: selectedIds }, {
             preserveScroll: true,
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                toast.error(t('common.error'), { description: firstError });
+            },
             onFinish: () => {
                 setIsBulkPublishing(false);
                 setSelectedIds([]);

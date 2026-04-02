@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Exam;
 
+use App\Events\IndividualMessageBroadcast;
 use App\Events\ExamAttemptPaused;
 use App\Events\TeacherMessageBroadcast;
+use App\Events\ExamAttemptStatusChanged;
+use App\Events\ExamTimeExtended;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Exam\AssignStudentsRequest;
 use App\Http\Requests\Exam\StoreExamRequest;
@@ -12,6 +15,7 @@ use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\User;
 use App\Models\ViolationLog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -31,7 +35,8 @@ class ExamController extends Controller
             ->where('instructor_id', auth()->id())
             ->withCount(['questions', 'assignments', 'attempts'])
             ->orderByDesc('created_at')
-            ->paginate(10);
+            ->paginate(12)
+            ->withQueryString();
 
         return Inertia::render('exams/instructor/index', [
             'exams' => $exams,
@@ -190,34 +195,28 @@ class ExamController extends Controller
             ->withCount('answers')
             ->get();
 
+        // Get count summaries in fewer queries
+        $statusCounts = $exam->attempts()
+            ->selectRaw('status, count(distinct student_id) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        // Total assigned students
+        $totalAssigned = $exam->assignments()->count();
+
+        // Unique students who have attempted the exam
+        $attemptedCount = $exam->attempts()->distinct('student_id')->count();
+
+        $completedCount = ($statusCounts['submitted'] ?? 0) + ($statusCounts['graded'] ?? 0) + ($statusCounts['auto_submitted'] ?? 0);
+        $inProgressCount = $statusCounts['in_progress'] ?? 0;
+        $notStartedCount = max(0, $totalAssigned - $attemptedCount);
+
         // Get all attempts for management
         $allAttempts = $exam->attempts()
             ->with('student:id,name,email')
             ->withCount('answers')
             ->orderByDesc('created_at')
             ->get();
-
-        // Count unique students who have completed (any status except in_progress)
-        $completedStudentIds = $exam->attempts()
-            ->whereIn('status', ['submitted', 'graded', 'auto_submitted'])
-            ->pluck('student_id')
-            ->unique();
-
-        // Students currently in progress
-        $inProgressStudentIds = $activeAttempts->pluck('student_id')->unique();
-
-        // Total assigned students
-        $totalAssigned = $exam->assignments()->count();
-
-        // Completed = students who finished and are not currently in progress
-        $completedCount = $completedStudentIds->diff($inProgressStudentIds)->count();
-
-        // In progress count
-        $inProgressCount = $inProgressStudentIds->count();
-
-        // Not started = assigned but never attempted
-        $attemptedStudentIds = $exam->attempts()->pluck('student_id')->unique();
-        $notStartedCount = $totalAssigned - $attemptedStudentIds->count();
 
         $recentViolations = ViolationLog::query()
             ->whereHas('attempt', fn ($q) => $q->where('exam_id', $exam->id))
@@ -284,6 +283,13 @@ class ExamController extends Controller
                 'status' => 'submitted',
                 'completed_at' => now(),
             ]);
+
+            // Notify monitor
+            broadcast(new ExamAttemptStatusChanged(
+                $exam->id,
+                $attempt->student_id,
+                'submitted'
+            ));
         }
 
         return back()->with('success', 'Attempt force submitted successfully.');
@@ -322,10 +328,19 @@ class ExamController extends Controller
             abort(404);
         }
 
+        $studentId = $attempt->student_id;
+
         // Delete associated answers and violation logs
         $attempt->answers()->delete();
-        $attempt->violationLogs()->delete();
+        $attempt->violations()->delete();
         $attempt->delete();
+
+        // Notify monitor
+        broadcast(new ExamAttemptStatusChanged(
+            $exam->id,
+            $studentId,
+            'reset'
+        ));
 
         return back()->with('success', 'Attempt reset successfully. Student can now retake the exam.');
     }
@@ -342,10 +357,19 @@ class ExamController extends Controller
             abort(404);
         }
 
+        $studentId = $attempt->student_id;
+
         // Delete associated answers and violation logs
         $attempt->answers()->delete();
-        $attempt->violationLogs()->delete();
+        $attempt->violations()->delete();
         $attempt->delete();
+
+        // Notify monitor
+        broadcast(new ExamAttemptStatusChanged(
+            $exam->id,
+            $studentId,
+            'deleted'
+        ));
 
         return back()->with('success', 'Attempt deleted successfully.');
     }
@@ -362,8 +386,15 @@ class ExamController extends Controller
             abort(404);
         }
 
-        $attempt->violationLogs()->delete();
+        $attempt->violations()->delete();
         $attempt->update(['violation_count' => 0]);
+
+        // Notify monitor
+        broadcast(new ExamAttemptStatusChanged(
+            $exam->id,
+            $attempt->student_id,
+            'violations_cleared'
+        ));
 
         return back()->with('success', 'Violations cleared for this attempt.');
     }
@@ -375,17 +406,42 @@ class ExamController extends Controller
     {
         Gate::authorize('update', $exam);
 
-        $validated = $request->validate([
+        $request->validate([
             'message' => ['required', 'string', 'max:500'],
         ]);
 
         broadcast(new TeacherMessageBroadcast(
             $exam->id,
-            $validated['message'],
+            $request->message,
             auth()->user()->name
         ))->toOthers();
 
         return back()->with('success', 'Message broadcasted to all students.');
+    }
+
+    /**
+     * Send a private message to a specific student.
+     */
+    public function sendIndividualMessage(Request $request, Exam $exam, ExamAttempt $attempt): JsonResponse
+    {
+        Gate::authorize('update', $exam);
+
+        if ($attempt->exam_id !== $exam->id) {
+            return response()->json(['error' => 'Invalid attempt'], 404);
+        }
+
+        $request->validate([
+            'message' => ['required', 'string', 'max:500'],
+        ]);
+
+        broadcast(new IndividualMessageBroadcast(
+            $exam->id,
+            $attempt->student_id,
+            $request->message,
+            auth()->user()->name
+        ));
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -446,7 +502,7 @@ class ExamController extends Controller
 
         // Broadcast to student instantly
         $attempt->refresh();
-        broadcast(new \App\Events\Exam\ExamTimeExtended(
+        broadcast(new ExamTimeExtended(
             $exam->id,
             $attempt->id,
             $attempt->remaining_time
@@ -470,10 +526,10 @@ class ExamController extends Controller
 
         foreach ($activeAttempts as $attempt) {
             $attempt->increment('extra_time_minutes', $validated['minutes']);
-            
+
             // Broadcast to each student
             $attempt->refresh();
-            broadcast(new \App\Events\Exam\ExamTimeExtended(
+            broadcast(new ExamTimeExtended(
                 $exam->id,
                 $attempt->id,
                 $attempt->remaining_time

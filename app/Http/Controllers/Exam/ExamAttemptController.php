@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Exam;
 
+use App\Events\ExamAttemptStatusChanged;
+use App\Events\StudentHeartbeatReceived;
 use App\Events\Exam\ExamAnswerSaved;
-use App\Events\Exam\ExamAttemptStatusChanged;
+use App\Events\Exam\ExamViolationLogged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Exam\LogViolationRequest;
 use App\Http\Requests\Exam\SubmitAnswerRequest;
@@ -98,6 +100,9 @@ class ExamAttemptController extends Controller
      */
     public function take(ExamAttempt $attempt): Response|RedirectResponse
     {
+        // Eager load exam relationship immediately
+        $attempt->load('exam');
+
         // Check if attempt is still valid BEFORE authorizing (prevents 403 screen on auto-submit)
         if (! $attempt->isInProgress()) {
             return redirect()
@@ -146,6 +151,7 @@ class ExamAttemptController extends Controller
         return Inertia::render('exams/student/take', [
             'attempt' => [
                 'id' => $attempt->id,
+                'student_id' => $attempt->student_id,
                 'started_at' => $attempt->started_at,
                 'remaining_time' => $attempt->remaining_time,
                 'violation_count' => $attempt->violation_count,
@@ -191,9 +197,14 @@ class ExamAttemptController extends Controller
             ]
         );
 
-        // Get current progress
+        // Optimization: Use eager-loaded counts or simple count query
         $answeredCount = $attempt->answers()->count();
-        $totalQuestions = $attempt->exam->questions_count ?? $attempt->exam->questions()->count();
+        $totalQuestions = $attempt->exam->questions_count;
+
+        // If count isn't cached/eager-loaded, get it once
+        if ($totalQuestions === null) {
+            $totalQuestions = $attempt->exam->questions()->count();
+        }
 
         // Notify monitor (Real-time progress!)
         broadcast(new ExamAnswerSaved(
@@ -313,7 +324,7 @@ class ExamAttemptController extends Controller
         ]);
 
         // Broadcast to monitor instantly (Teacher dashboard)
-        broadcast(new \App\Events\Exam\ExamViolationLogged(
+        broadcast(new ExamViolationLogged(
             $attempt->exam_id,
             auth()->user()->name,
             $validated['violation_type'],
@@ -329,6 +340,13 @@ class ExamAttemptController extends Controller
         $maxViolations = $attempt->exam->max_violations ?? 5;
         if ($attempt->violation_count >= $maxViolations) {
             $this->finalizeAttempt($attempt, true);
+
+            // Notify monitor (Student Auto-Submitted due to violations!)
+            broadcast(new ExamAttemptStatusChanged(
+                $attempt->exam_id,
+                $attempt->student_id,
+                ExamAttempt::STATUS_AUTO_SUBMITTED
+            ));
 
             return response()->json([
                 'auto_submitted' => true,
@@ -401,10 +419,18 @@ class ExamAttemptController extends Controller
         }
 
         $session = $attempt->activeSession;
+        $now = now();
 
         if ($session) {
-            $session->update(['last_activity' => now()]);
+            $session->update(['last_activity' => $now]);
         }
+
+        // Broadcast to monitor (Real-time presence!)
+        broadcast(new StudentHeartbeatReceived(
+            $attempt->exam_id,
+            $attempt->id,
+            $now->toIso8601String()
+        ));
 
         // Ensure we load the fresh database state (avoid implicit route binding caching)
         $attempt->refresh();

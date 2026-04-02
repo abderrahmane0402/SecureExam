@@ -53,11 +53,11 @@ export default function StudentExamResults({ exam, attempt }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${t('dashboard.results')}: ${exam.title}`} />
-            <div className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 sm:p-6">
                 {/* Header */}
-                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-center text-white">
-                    <h1 className="text-2xl font-bold">{exam.title}</h1>
-                    <div className="mt-4 flex items-center justify-center gap-4">
+                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-5 sm:p-6 text-center text-white">
+                    <h1 className="text-xl sm:text-2xl font-bold break-words">{exam.title}</h1>
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
                         <div className="text-center">
                             <p className="text-4xl font-bold">
                                 {attempt.score != null
@@ -215,12 +215,12 @@ export default function StudentExamResults({ exam, attempt }: Props) {
                                             >
                                                 {index + 1}
                                             </span>
-                                            <div className="flex-1">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <p className="font-medium">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                                    <p className="font-medium min-w-0 break-words whitespace-pre-wrap">
                                                         {question.content}
                                                     </p>
-                                                    <div className="flex shrink-0 items-center gap-2">
+                                                    <div className="flex shrink-0 flex-wrap items-center gap-2 ml-auto">
                                                         <Badge
                                                             variant="outline"
                                                             className="text-xs"

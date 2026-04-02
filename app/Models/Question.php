@@ -67,6 +67,14 @@ class Question extends Model
         return $this->hasMany(QuestionOption::class)->orderBy('order');
     }
 
+    /**
+     * @return HasMany<ExamAnswer, $this>
+     */
+    public function answers(): HasMany
+    {
+        return $this->hasMany(ExamAnswer::class);
+    }
+
     public function isAutoGradable(): bool
     {
         return in_array($this->type, [

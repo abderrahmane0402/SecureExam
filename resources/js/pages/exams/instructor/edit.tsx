@@ -9,7 +9,7 @@ import {
     GripVerticalIcon,
     CheckCircleIcon,
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,11 @@ export default function EditExam({ exam }: Props) {
         null,
     );
     const [localQuestions, setLocalQuestions] = useState(exam.questions || []);
+
+    // Sync local questions when props change (e.g., after adding a question)
+    useEffect(() => {
+        setLocalQuestions(exam.questions || []);
+    }, [exam.questions]);
 
     // Exam Settings Form
     const examForm = useForm({
@@ -619,7 +624,7 @@ export default function EditExam({ exam }: Props) {
                                                 className="h-8 text-xs"
                                                 onClick={() => {
                                                     const aikenTemplate =
-                                                        'What is the capital of France?\nA) Paris\nB) Lyon\nC) Marseille\nD) Berlin\nANSWER: A';
+                                                        'What is the capital of France?\nA) Paris\nB) Lyon\nC) Marseille\nD) Berlin\nANSWER: A\nPOINTS: 2\n\nWhich of these are fruits?\nA) Apple\nB) Carrot\nC) Banana\nD) Potato\nANSWER: A,C\nPOINTS: 5\n\nDescribe the impact of the industrial revolution.\nTYPE: essay\nPOINTS: 10\n\nThe earth is flat.\nA) True\nB) False\nANSWER: B\nPOINTS: 1';
                                                     const blob = new Blob(
                                                         [aikenTemplate],
                                                         { type: 'text/plain' },
@@ -775,7 +780,7 @@ export default function EditExam({ exam }: Props) {
                                                                                     </div>
                                                                                 </div>
 
-                                                                                <p className="pr-8 text-[15px] leading-relaxed font-bold text-foreground">
+                                                                                <p className="pr-8 text-[15px] leading-relaxed font-bold text-foreground break-words whitespace-pre-wrap">
                                                                                     {
                                                                                         question.content
                                                                                     }
@@ -792,7 +797,7 @@ export default function EditExam({ exam }: Props) {
                                                                                                     opt.id
                                                                                                 }
                                                                                                 className={cn(
-                                                                                                    'flex items-start gap-3 rounded-xl border-2 p-3 text-sm transition-colors',
+                                                                                                    'flex items-start gap-3 rounded-xl border-2 p-3 text-sm transition-colors min-w-0',
                                                                                                     opt.is_correct
                                                                                                         ? 'border-emerald-500/30 bg-emerald-500/5'
                                                                                                         : 'border-border bg-muted/30 text-muted-foreground',
@@ -812,7 +817,7 @@ export default function EditExam({ exam }: Props) {
                                                                                                 </div>
                                                                                                 <span
                                                                                                     className={cn(
-                                                                                                        'font-medium',
+                                                                                                        'font-medium break-words whitespace-pre-wrap flex-1 min-w-0',
                                                                                                         opt.is_correct
                                                                                                             ? 'font-bold text-emerald-600 dark:text-emerald-400'
                                                                                                             : 'text-muted-foreground',
@@ -914,6 +919,7 @@ export default function EditExam({ exam }: Props) {
                         </SheetHeader>
 
                         <form
+                            id="question-form"
                             onSubmit={handleQuestionSubmit}
                             className="flex-1 space-y-10 px-8 py-8"
                         >
@@ -1280,6 +1286,7 @@ export default function EditExam({ exam }: Props) {
                             </Button>
                             <Button
                                 type="submit"
+                                form="question-form"
                                 disabled={questionForm.processing}
                                 className="h-14 rounded-[1.25rem] bg-primary px-12 text-[11px] font-black tracking-widest text-primary-foreground uppercase shadow-2xl shadow-primary/30 transition-all hover:bg-primary/90 active:scale-[0.98]"
                             >

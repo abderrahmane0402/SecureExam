@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Events\Exam;
+namespace App\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -8,7 +8,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ExamTimeExtended implements ShouldBroadcastNow
+class ExamQuestionsUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -17,8 +17,9 @@ class ExamTimeExtended implements ShouldBroadcastNow
      */
     public function __construct(
         public int $exam_id,
-        public int $attempt_id,
-        public int $new_remaining_time
+        public string $change_type, // 'created', 'updated', 'deleted'
+        public ?int $question_id = null,
+        public ?string $question_text = null
     ) {}
 
     /**
@@ -38,6 +39,6 @@ class ExamTimeExtended implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'ExamTimeExtended';
+        return 'ExamQuestionsUpdated';
     }
 }

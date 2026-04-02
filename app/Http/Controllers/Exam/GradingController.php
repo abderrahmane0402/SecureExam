@@ -32,7 +32,7 @@ class GradingController extends Controller
         $attempts = ExamAttempt::query()
             ->where('exam_id', $examId)
             ->whereIn('status', [ExamAttempt::STATUS_SUBMITTED, ExamAttempt::STATUS_AUTO_SUBMITTED, ExamAttempt::STATUS_GRADED])
-            ->with(['student:id,name,email', 'violations'])
+            ->with(['student:id,name,email'])
             ->withCount(['answers', 'violations'])
             ->orderByDesc('submitted_at')
             ->get();

@@ -17,7 +17,7 @@ import {
     PlayIcon,
     SendIcon,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Tooltip,
     TooltipContent,
@@ -115,6 +116,66 @@ export default function MonitorExam({
     const [currentTime, setCurrentTime] = useState(() => Date.now());
     const [broadcastMessage, setBroadcastMessage] = useState('');
     const [isBroadcasting, setIsBroadcasting] = useState(false);
+    const [privateMessage, setPrivateMessage] = useState('');
+    const [isSendingPrivate, setIsSendingPrivate] = useState(false);
+    const [messagingAttemptId, setMessagingAttemptId] = useState<number | null>(null);
+
+    // Batch Update Manager for frequent events (Answers & Heartbeats)
+    const hasPendingUpdates = useRef(false);
+
+    useEffect(() => {
+        // This "Metronome" checks for changes every 5 seconds
+        const batchInterval = setInterval(() => {
+            if (hasPendingUpdates.current) {
+                console.log('🔄 Executing batched update for student progress...');
+                router.reload({
+                    only: ['attempts', 'activeStudents'],
+
+
+                    onFinish: () => {
+                        hasPendingUpdates.current = false;
+                    }
+                });
+            }
+        }, 5000);
+
+        return () => clearInterval(batchInterval);
+    }, []);
+
+    // Helpers
+    const isOffline = (lastActivity?: string) => {
+        if (!lastActivity) return true;
+        const last = new Date(lastActivity);
+        return (currentTime - last.getTime()) > 35000; // 35 seconds threshold (2 heartbeats)
+    };
+
+    const handleSendPrivateMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!messagingAttemptId || !privateMessage.trim()) return;
+
+        setIsSendingPrivate(true);
+        try {
+            const response = await fetch(`/exams/${exam.id}/attempts/${messagingAttemptId}/message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ message: privateMessage }),
+            });
+
+            if (response.ok) {
+                toast.success(t('monitor.broadcast.success'));
+                setPrivateMessage('');
+                setMessagingAttemptId(null);
+            }
+        } catch {
+            toast.error(t('auth.forgotPassword.title')); // Generic error key or fix common.error if it exists
+        } finally {
+            setIsSendingPrivate(false);
+        }
+    };
 
     // Dialog States
     const [confirmingAction, setConfirmingAction] = useState<{ type: ConfirmAction; id: number } | null>(null);
@@ -124,36 +185,72 @@ export default function MonitorExam({
     // Real-time Live Proctoring Events
     useEcho(
         `exam-monitoring.${exam.id}`,
-        'ExamViolationLogged',
-        () => {
+        '.ExamViolationLogged',
+        (e: any) => {
+            console.log('🚨 URGENT: Violation received, reloading immediately:', e);
             router.reload({
                 only: ['recentViolations', 'activeStudents', 'attempts'],
+
             });
         }
     );
 
     useEcho(
         `exam-monitoring.${exam.id}`,
-        'ExamAttemptStatusChanged',
-        () => {
+        '.ExamAttemptStatusChanged',
+        (e: any) => {
+            console.log('⚡ URGENT: Status change received, reloading immediately:', e);
             router.reload({
                 only: [
-                    'activeStudents', 
-                    'attempts', 
-                    'inProgressCount', 
-                    'completedCount', 
+                    'activeStudents',
+                    'attempts',
+                    'inProgressCount',
+                    'completedCount',
                     'notStartedCount'
                 ],
+
             });
         }
     );
 
     useEcho(
         `exam-monitoring.${exam.id}`,
-        'ExamAnswerSaved',
-        () => {
+        '.ExamAnswerSaved',
+        (e: any) => {
+            console.log('📝 BATCHED: Answer saved, queuing update...');
+            hasPendingUpdates.current = true;
+        }
+    );
+
+    useEcho(
+        `exam-monitoring.${exam.id}`,
+        '.StudentHeartbeatReceived',
+        (e: any) => {
+            console.log('💓 BATCHED: Heartbeat received, queuing update...');
+            hasPendingUpdates.current = true;
+        }
+    );
+
+    useEcho(
+        `exam-room.${exam.id}`,
+        '.ExamAttemptPaused',
+        (e: any) => {
+            console.log('⏸️ URGENT: Pause event received, reloading immediately:', e);
             router.reload({
-                only: ['attempts', 'activeStudents'],
+                only: ['activeStudents', 'attempts'],
+
+            });
+        }
+    );
+
+    useEcho(
+        `exam-room.${exam.id}`,
+        '.ExamTimeExtended',
+        (e: any) => {
+            console.log('⏳ URGENT: Time extended received, reloading immediately:', e);
+            router.reload({
+                only: ['activeStudents', 'attempts'],
+
             });
         }
     );
@@ -212,27 +309,53 @@ export default function MonitorExam({
 
     const executeAction = () => {
         if (!confirmingAction) return;
-        
+
         const { type, id } = confirmingAction;
-        
+
         if (type === 'reset') {
-            router.post(`/exams/${exam.id}/attempts/${id}/reset`, {}, {
-                onSuccess: () => toast.success(t('monitor.toast.reset_success'))
-            });
+            router.post(
+                `/exams/${exam.id}/attempts/${id}/reset`,
+                {},
+                {
+                    onSuccess: () =>
+                        toast.success(t('monitor.toast.reset_success')),
+                    preserveScroll: true,
+                    preserveState: true,
+                },
+            );
         } else if (type === 'delete') {
             router.delete(`/exams/${exam.id}/attempts/${id}`, {
-                onSuccess: () => toast.success(t('monitor.toast.delete_success'))
+                onSuccess: () =>
+                    toast.success(t('monitor.toast.delete_success')),
+                preserveScroll: true,
+                preserveState: true,
             });
         } else if (type === 'clear_violations') {
-            router.post(`/exams/${exam.id}/attempts/${id}/reset-violations`, {}, {
-                onSuccess: () => toast.success(t('monitor.toast.clear_violations_success'))
-            });
+            router.post(
+                `/exams/${exam.id}/attempts/${id}/reset-violations`,
+                {},
+                {
+                    onSuccess: () =>
+                        toast.success(
+                            t('monitor.toast.clear_violations_success'),
+                        ),
+                    preserveScroll: true,
+                    preserveState: true,
+                },
+            );
         } else if (type === 'force_submit') {
-            router.post(`/exams/${exam.id}/attempts/${id}/force-submit`, {}, {
-                onSuccess: () => toast.success(t('monitor.toast.force_submit_success'))
-            });
+            router.post(
+                `/exams/${exam.id}/attempts/${id}/force-submit`,
+                {},
+                {
+                    onSuccess: () =>
+                        toast.success(t('monitor.toast.force_submit_success')),
+                    preserveScroll: true,
+                    preserveState: true,
+                },
+            );
         }
-        
+
         setConfirmingAction(null);
     };
 
@@ -241,11 +364,20 @@ export default function MonitorExam({
         const minutes = parseInt(extendingTime.minutes);
         if (isNaN(minutes) || minutes <= 0) return;
 
-        router.post(`/exams/${exam.id}/attempts/${extendingTime.id}/extend-time`, {
-            minutes: minutes
-        }, {
-            onSuccess: () => toast.success(t('monitor.toast.extend_single_success', [minutes]))
-        });
+        router.post(
+            `/exams/${exam.id}/attempts/${extendingTime.id}/extend-time`,
+            {
+                minutes: minutes,
+            },
+            {
+                onSuccess: () =>
+                    toast.success(
+                        t('monitor.toast.extend_single_success', [minutes]),
+                    ),
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
         setExtendingTime(null);
     };
 
@@ -254,16 +386,28 @@ export default function MonitorExam({
         const minutes = parseInt(extendingTimeAll.minutes);
         if (isNaN(minutes) || minutes <= 0) return;
 
-        router.post(`/exams/${exam.id}/attempts/extend-time-all`, {
-            minutes: minutes
-        }, {
-            onSuccess: () => toast.success(t('monitor.toast.extend_all_success', [minutes]))
-        });
+        router.post(
+            `/exams/${exam.id}/attempts/extend-time-all`,
+            {
+                minutes: minutes,
+            },
+            {
+                onSuccess: () =>
+                    toast.success(
+                        t('monitor.toast.extend_all_success', [minutes]),
+                    ),
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
         setExtendingTimeAll(null);
     };
 
     const handleTogglePause = (attemptId: number) => {
-        router.post(`/exams/${exam.id}/attempts/${attemptId}/toggle-pause`);
+        router.post(`/exams/${exam.id}/attempts/${attemptId}/toggle-pause`, {}, {
+            preserveScroll: true,
+            preserveState: true,
+        });
     };
 
     const formatDateTime = (date: string) => {
@@ -311,7 +455,7 @@ export default function MonitorExam({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${t('monitor.title')}: ${exam.title}`} />
             <div className="flex flex-col gap-8 p-4 md:p-8 max-w-(--breakpoint-2xl) mx-auto w-full">
-                
+
                 {/* Modern Header — Glassmorphic Control Panel */}
                 <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-indigo-700 via-blue-600 to-cyan-500 dark:from-primary/30 dark:via-primary/10 dark:to-background p-8 text-white shadow-2xl shadow-indigo-500/20 border border-white/10">
                     <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
@@ -334,7 +478,7 @@ export default function MonitorExam({
                                 </p>
                             </div>
                         </div>
-                        
+
                         <div className="flex flex-wrap items-center gap-4 relative z-10">
                             <div className="flex items-center gap-4 rounded-[1.5rem] bg-black/10 px-6 py-4 backdrop-blur-md border border-white/10 shadow-xl group transition-all hover:bg-black/20">
                                 <span className={cn(
@@ -343,8 +487,8 @@ export default function MonitorExam({
                                 )}>
                                     {t('monitor.autoRefresh')}
                                 </span>
-                                <Switch 
-                                    checked={isPolling} 
+                                <Switch
+                                    checked={isPolling}
                                     onCheckedChange={setIsPolling}
                                     className="data-[state=checked]:bg-emerald-500"
                                 />
@@ -370,7 +514,7 @@ export default function MonitorExam({
                             </Button>
                         </div>
                     </div>
-                    
+
                     {/* Abstract Shapes */}
                     <div className="absolute -right-20 -top-20 size-80 rounded-full bg-cyan-400/20 blur-[100px]" />
                     <div className="absolute -left-20 -bottom-20 size-80 rounded-full bg-indigo-400/10 blur-[100px]" />
@@ -420,7 +564,7 @@ export default function MonitorExam({
                                     {t('monitor.broadcast.placeholder')}
                                 </p>
                             </div>
-                            
+
                             <form onSubmit={handleBroadcast} className="flex-1 w-full flex flex-col sm:flex-row gap-4">
                                 <div className="relative flex-1">
                                     <Input
@@ -434,7 +578,7 @@ export default function MonitorExam({
                                         {broadcastMessage.length}/500
                                     </div>
                                 </div>
-                                <Button 
+                                <Button
                                     disabled={isBroadcasting || !broadcastMessage.trim()}
                                     className="h-16 rounded-2xl px-10 font-black uppercase tracking-widest text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
                                 >
@@ -466,30 +610,36 @@ export default function MonitorExam({
                                     const progress = Math.round((attempt.answers_count / (exam.questions_count || 1)) * 100);
                                     const violations = attempt.violation_logs?.length || 0;
                                     const isCritical = violations >= 5;
+                                    const offline = isOffline(last_activity || attempt.started_at);
 
                                     return (
                                         <Card key={attempt.id} className={cn(
-                                            "group relative overflow-hidden border-none bg-card/80 backdrop-blur-sm shadow-sm ring-1 transition-all hover:shadow-2xl rounded-2xl",
-                                            isCritical ? "ring-rose-500/50" : "ring-border/50 hover:ring-primary/30"
+                                            "group relative overflow-hidden border-none backdrop-blur-sm shadow-sm ring-1 transition-all hover:shadow-2xl rounded-2xl",
+                                            offline ? "bg-muted/40 grayscale opacity-80 ring-slate-300" :
+                                                isCritical ? "bg-card/80 ring-rose-500/50" : "bg-card/80 ring-border/50 hover:ring-primary/30"
                                         )}>
                                             <CardHeader className="p-6 md:p-8 pb-4">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex items-center gap-5 min-w-0">
                                                         <div className={cn(
                                                             "flex size-16 shrink-0 items-center justify-center rounded-[1.25rem] font-black text-2xl shadow-inner transition-colors",
-                                                            isCritical ? "bg-rose-50 text-rose-600" : "bg-primary/10 text-primary"
+                                                            offline ? "bg-slate-200 text-slate-500" :
+                                                                isCritical ? "bg-rose-50 text-rose-600" : "bg-primary/10 text-primary"
                                                         )}>
                                                             {user.name.charAt(0)}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <CardTitle className="text-xl font-black truncate tracking-tight mb-0.5 text-foreground">{user.name}</CardTitle>
+                                                            <CardTitle className="text-xl font-black truncate tracking-tight mb-0.5 text-foreground">
+                                                                {user.name}
+                                                                {offline && <span className="ml-2 text-[10px] text-rose-500 animate-pulse font-black uppercase italic tracking-widest">{t('monitor.offline')}</span>}
+                                                            </CardTitle>
                                                             <CardDescription className="text-xs font-bold text-muted-foreground truncate flex items-center gap-2">
-                                                                <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                <div className={cn("size-1.5 rounded-full", offline ? "bg-slate-400" : "bg-emerald-500 animate-pulse")} />
                                                                 {user.email}
                                                             </CardDescription>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="size-10 rounded-xl hover:bg-accent">
@@ -498,6 +648,10 @@ export default function MonitorExam({
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-2xl border-none ring-1 ring-border/50 bg-popover">
                                                             <DropdownMenuLabel className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">{t('monitor.session_management')}</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => setMessagingAttemptId(attempt.id)} className="rounded-xl px-3 py-2.5 font-bold cursor-pointer">
+                                                                <SendIcon className="mr-3 size-4 text-primary" />
+                                                                {t('monitor.action.message_individual')}
+                                                            </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => handleTogglePause(attempt.id)} className="rounded-xl px-3 py-2.5 font-bold cursor-pointer">
                                                                 {attempt.is_paused ? (
                                                                     <PlayIcon className="mr-3 size-4 text-emerald-500" />
@@ -506,22 +660,22 @@ export default function MonitorExam({
                                                                 )}
                                                                 {attempt.is_paused ? t('monitor.action.resume') : t('monitor.action.pause')}
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem 
-                                                                onClick={() => setExtendingTime({ id: attempt.id, minutes: '10' })} 
+                                                            <DropdownMenuItem
+                                                                onClick={() => setExtendingTime({ id: attempt.id, minutes: '10' })}
                                                                 className="rounded-xl px-3 py-2.5 font-bold cursor-pointer"
                                                             >
                                                                 <ClockIcon className="mr-3 size-4 text-blue-500" />
                                                                 {t('monitor.action.extend_time')}
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator className="my-2 opacity-50" />
-                                                            <DropdownMenuItem 
-                                                                onClick={() => setConfirmingAction({ type: 'force_submit', id: attempt.id })} 
+                                                            <DropdownMenuItem
+                                                                onClick={() => setConfirmingAction({ type: 'force_submit', id: attempt.id })}
                                                                 className="rounded-xl px-3 py-2.5 text-rose-600 focus:bg-rose-50 focus:text-rose-700 font-black flex items-center gap-3 cursor-pointer"
                                                             >
                                                                 <XCircleIcon className="size-4" />
                                                                 {t('monitor.action.forceSubmit')}
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem 
+                                                            <DropdownMenuItem
                                                                 onClick={() => setConfirmingAction({ type: 'clear_violations', id: attempt.id })}
                                                                 className="rounded-xl px-3 py-2.5 font-bold cursor-pointer"
                                                             >
@@ -532,7 +686,7 @@ export default function MonitorExam({
                                                     </DropdownMenu>
                                                 </div>
                                             </CardHeader>
-                                            
+
                                             <CardContent className="p-6 md:p-8 pt-0 space-y-8">
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between items-end">
@@ -540,7 +694,7 @@ export default function MonitorExam({
                                                         <p className="text-xl font-black tabular-nums tracking-tighter text-foreground">{progress}%</p>
                                                     </div>
                                                     <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted p-0.5">
-                                                        <div 
+                                                        <div
                                                             className={cn(
                                                                 "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
                                                                 isCritical ? "bg-rose-500 shadow-rose-500/20" : "bg-primary shadow-primary/20"
@@ -568,7 +722,7 @@ export default function MonitorExam({
                                                                         <div className="p-5 bg-blue-950 text-white w-72 space-y-4">
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="size-1.5 rounded-full bg-rose-400 animate-pulse" />
-                                                                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 italic">{t('monitor.security_alerts')}</p>
+                                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 italic">{t('monitor.security_alerts')}</p>
                                                                             </div>
                                                                             <div className="space-y-3">
                                                                                 {attempt.violation_logs.slice(0, 3).map((v) => (
@@ -580,7 +734,7 @@ export default function MonitorExam({
                                                                                     </div>
                                                                                 ))}
                                                                                 {violations > 3 && (
-                                                                                     <p className="text-center text-[10px] font-black text-blue-400 pt-1">{t('monitor.more_incidents', [violations - 3])}</p>
+                                                                                    <p className="text-center text-[10px] font-black text-blue-400 pt-1">{t('monitor.more_incidents', [violations - 3])}</p>
                                                                                 )}
                                                                             </div>
                                                                         </div>
@@ -642,8 +796,8 @@ export default function MonitorExam({
                                                     key={violation.id}
                                                     className={cn(
                                                         "group relative flex flex-col gap-3 rounded-2xl border p-5 transition-all hover:-translate-y-1 duration-300 shadow-sm",
-                                                        isCritical 
-                                                            ? "bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20 shadow-rose-200/20 dark:shadow-rose-950/20" 
+                                                        isCritical
+                                                            ? "bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20 shadow-rose-200/20 dark:shadow-rose-950/20"
                                                             : "bg-slate-50 dark:bg-muted border-slate-100 dark:border-border"
                                                     )}
                                                 >
@@ -652,14 +806,14 @@ export default function MonitorExam({
                                                             <div className={cn(
                                                                 "size-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]",
                                                                 violation.severity === 'critical' ? 'bg-rose-500 shadow-rose-500/40' :
-                                                                violation.severity === 'high' ? 'bg-orange-500 shadow-orange-500/40' :
-                                                                'bg-amber-400 shadow-amber-400/40'
+                                                                    violation.severity === 'high' ? 'bg-orange-500 shadow-orange-500/40' :
+                                                                        'bg-amber-400 shadow-amber-400/40'
                                                             )} />
                                                             <span className={cn(
                                                                 "text-[11px] font-black tracking-widest uppercase",
-                                                                isCritical ? "text-rose-600 dark:text-rose-400" : 
-                                                                violation.severity === 'high' ? 'text-orange-600 dark:text-orange-400' : 
-                                                                'text-amber-600 dark:text-amber-400'
+                                                                isCritical ? "text-rose-600 dark:text-rose-400" :
+                                                                    violation.severity === 'high' ? 'text-orange-600 dark:text-orange-400' :
+                                                                        'text-amber-600 dark:text-amber-400'
                                                             )}>
                                                                 {getViolationLabel(violation.violation_type)}
                                                             </span>
@@ -831,8 +985,8 @@ export default function MonitorExam({
             </div>
 
             {/* Action Confirmation Modals */}
-            <Dialog 
-                open={confirmingAction !== null} 
+            <Dialog
+                open={confirmingAction !== null}
                 onOpenChange={(open) => !open && setConfirmingAction(null)}
             >
                 <DialogContent className="rounded-3xl border border-border shadow-3xl max-w-sm p-8 bg-card overflow-hidden text-foreground">
@@ -852,14 +1006,14 @@ export default function MonitorExam({
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="flex-col sm:flex-row gap-3 pt-8">
-                        <Button 
-                            variant="ghost" 
+                        <Button
+                            variant="ghost"
                             onClick={() => setConfirmingAction(null)}
                             className="rounded-2xl font-black uppercase tracking-widest text-xs h-12 flex-1"
                         >
                             {t('common.cancel')}
                         </Button>
-                        <Button 
+                        <Button
                             variant={confirmingAction?.type === 'delete' || confirmingAction?.type === 'force_submit' ? 'destructive' : 'default'}
                             onClick={executeAction}
                             className={cn(
@@ -874,8 +1028,8 @@ export default function MonitorExam({
             </Dialog>
 
             {/* Extend Time Modal (Single) */}
-            <Dialog 
-                open={extendingTime !== null} 
+            <Dialog
+                open={extendingTime !== null}
                 onOpenChange={(open) => !open && setExtendingTime(null)}
             >
                 <DialogContent className="rounded-3xl border border-border shadow-3xl max-w-sm p-8 bg-card overflow-hidden text-foreground">
@@ -901,14 +1055,14 @@ export default function MonitorExam({
                         </div>
                     </div>
                     <DialogFooter className="flex-col sm:flex-row gap-3 pt-4">
-                        <Button 
-                            variant="ghost" 
+                        <Button
+                            variant="ghost"
                             onClick={() => setExtendingTime(null)}
                             className="rounded-2xl font-black uppercase tracking-widest text-xs h-12 flex-1"
                         >
                             {t('common.cancel')}
                         </Button>
-                        <Button 
+                        <Button
                             onClick={executeExtendTime}
                             className="rounded-2xl font-black uppercase tracking-widest text-xs h-12 flex-1 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
                         >
@@ -919,8 +1073,8 @@ export default function MonitorExam({
             </Dialog>
 
             {/* Extend Time Modal (All) */}
-            <Dialog 
-                open={extendingTimeAll !== null} 
+            <Dialog
+                open={extendingTimeAll !== null}
                 onOpenChange={(open) => !open && setExtendingTimeAll(null)}
             >
                 <DialogContent className="rounded-3xl border border-border shadow-3xl max-w-sm p-8 bg-card overflow-hidden text-foreground">
@@ -946,14 +1100,14 @@ export default function MonitorExam({
                         </div>
                     </div>
                     <DialogFooter className="flex-col sm:flex-row gap-3 pt-4">
-                        <Button 
-                            variant="ghost" 
+                        <Button
+                            variant="ghost"
                             onClick={() => setExtendingTimeAll(null)}
                             className="rounded-2xl font-black uppercase tracking-widest text-xs h-12 flex-1"
                         >
                             {t('common.cancel')}
                         </Button>
-                        <Button 
+                        <Button
                             onClick={executeExtendTimeAll}
                             className="rounded-2xl font-black uppercase tracking-widest text-xs h-12 flex-1 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
                         >
@@ -962,8 +1116,55 @@ export default function MonitorExam({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            
-            <style dangerouslySetInnerHTML={{ __html: `
+
+            {/* Private Message Modal */}
+            <Dialog
+                open={messagingAttemptId !== null}
+                onOpenChange={(open) => !open && setMessagingAttemptId(null)}
+            >
+                <DialogContent className="rounded-3xl border border-border shadow-3xl max-w-sm p-8 bg-card overflow-hidden text-foreground">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500" />
+                    <DialogHeader className="pt-4">
+                        <DialogTitle className="text-2xl font-black italic tracking-tight text-foreground">
+                            {t('monitor.action.message_individual')}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm font-bold pt-4 text-muted-foreground leading-relaxed">
+                            {t('monitor.action.message_individual.desc')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSendPrivateMessage}>
+                        <div className="py-6">
+                            <Textarea
+                                value={privateMessage}
+                                onChange={(e) => setPrivateMessage(e.target.value)}
+                                placeholder={t('monitor.broadcast.placeholder')}
+                                className="min-h-[120px] rounded-2xl bg-background border-border text-foreground font-bold p-4 focus-visible:ring-primary shadow-sm"
+                                maxLength={500}
+                            />
+                        </div>
+                        <DialogFooter className="flex-col sm:flex-row gap-3">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setMessagingAttemptId(null)}
+                                className="rounded-2xl font-black uppercase tracking-widest text-xs h-12 flex-1"
+                            >
+                                {t('common.cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isSendingPrivate || !privateMessage.trim()}
+                                className="rounded-2xl font-black uppercase tracking-widest text-xs h-12 flex-1 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+                            >
+                                {isSendingPrivate ? t('common.loading') : t('common.save')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 5px;
                 }

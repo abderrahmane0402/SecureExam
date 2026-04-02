@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\Exam\ExamAnswerSaved;
+use App\Events\ExamAnswerSaved;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\Question;

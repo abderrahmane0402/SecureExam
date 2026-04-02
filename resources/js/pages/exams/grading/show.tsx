@@ -636,7 +636,7 @@ export default function GradeAttempt({
                                             </div>
                                         </div>
 
-                                        <p className="mb-8 text-lg font-black text-slate-900 dark:text-foreground leading-snug tracking-tight">
+                                        <p className="mb-8 text-lg font-black text-slate-900 dark:text-foreground leading-snug tracking-tight break-all">
                                             {q.content}
                                         </p>
 
@@ -666,7 +666,7 @@ export default function GradeAttempt({
                                                                     )}>
                                                                         {isSelected && (opt.is_correct ? <CheckIcon className="size-4" /> : <XIcon className="size-4" />)}
                                                                     </div>
-                                                                    <span className="font-bold whitespace-normal">{opt.content}</span>
+                                                                    <span className="font-bold whitespace-normal break-all">{opt.content}</span>
                                                                 </div>
                                                                 {opt.is_correct && (
                                                                     <Badge className="bg-emerald-500 hover:bg-emerald-500 border-none h-5 px-1.5 sm:px-2.5 text-[9px] font-black uppercase tracking-widest">
@@ -699,7 +699,7 @@ export default function GradeAttempt({
 
                                             {(q.type === 'short_text' || q.type === 'essay') && (
                                                 <div className="space-y-4">
-                                                    <div className="text-base font-bold whitespace-pre-wrap leading-relaxed text-slate-800 dark:text-muted-foreground p-2">
+                                                    <div className="text-base font-bold whitespace-pre-wrap leading-relaxed text-slate-800 dark:text-muted-foreground p-2 break-all">
                                                         {q.answer?.text_answer || (
                                                             <div className="flex flex-col items-center justify-center py-10 opacity-30 italic">
                                                                 <BanIcon className="size-10 mb-2" />

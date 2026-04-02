@@ -4,9 +4,9 @@ import {
     useState,
     useCallback,
     useEffect
-    
+
 } from 'react';
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react';
 
 export type Language = 'en' | 'fr';
 
@@ -31,6 +31,7 @@ const translations = {
         'common.create': 'Create',
         'common.search': 'Search',
         'common.loading': 'Loading...',
+        'common.error': 'Error',
         'common.noResults': 'No results found',
         'common.dashboard': 'Dashboard',
         'common.continue': 'Continue',
@@ -343,6 +344,8 @@ const translations = {
         'grading.bulk.selected': '{0} students selected',
         'grading.bulk.grade_selected': 'Grade Selected',
         'grading.bulk.publish_selected': 'Publish Selected',
+        'grading.bulk.error.ungraded_title': 'Ungraded Students Selected',
+        'grading.bulk.error.ungraded_desc': 'There are {0} selected students who have not been fully graded yet. Please grade them before publishing.',
         'grading.table.pts': 'PTS',
         'grading.filter.performance': 'Performance',
         'grading.violation.secure': 'SECURE PERIMETER',
@@ -677,6 +680,16 @@ const translations = {
         'exam.take.timeExtended.title': 'Time Extended! 🎁',
         'exam.take.timeExtended.desc': 'The instructor has granted you extra time for this exam.',
         'exam.take.questionStatus': 'Question {0} of {1}',
+        'exam.take.questionUpdated': 'Question updated: {0}',
+        'exam.take.questionDeleted': 'A question has been removed from the exam and your answer was reset.',
+        'exam.take.answerResetDesc': 'Your answer for this question has been reset due to a structure change.',
+        'exam.take.newQuestionAdded': 'New question added!',
+        'exam.take.newQuestionAddedDesc': 'A new question has been added to the exam.',
+        'exam.take.violationsCleared.title': 'Warnings Reset',
+        'exam.take.violationsCleared.desc': 'Your security violations have been cleared by the instructor. You may continue your exam.',
+        'exam.take.status.live': 'LIVE',
+        'exam.take.status.reconnecting': 'RECONNECTING',
+        'exam.take.status.offline': 'OFFLINE',
 
         // Monitoring Dashboard
         'monitor.title': 'Live Control Room',
@@ -695,6 +708,7 @@ const translations = {
         'monitor.noViolations': 'No Alerts Detected',
         'monitor.studentAttempts': 'Session History',
         'monitor.noAttempts': 'No attempts recorded yet.',
+        'monitor.offline': 'OFFLINE',
         'monitor.answered': 'Progress',
         'monitor.ago': 'ago',
         'monitor.secShort': 's',
@@ -717,6 +731,8 @@ const translations = {
         'monitor.action.forceSubmit.confirm': 'Are you sure you want to force submit this exam? The student will be locked out immediately.',
         'monitor.action.pause': 'Pause Session',
         'monitor.action.resume': 'Resume Session',
+        'monitor.action.message_individual': 'Direct Message',
+        'monitor.action.message_individual.desc': 'Send a private notification to this student.',
         'monitor.action.extend_time': 'Extend Duration',
         'monitor.action.extend_time.prompt': 'Enter the number of minutes to add to this session.',
         'monitor.action.extend_time.placeholder': 'Minutes (e.g., 10)',
@@ -788,6 +804,7 @@ const translations = {
         'common.create': 'Créer',
         'common.search': 'Rechercher',
         'common.loading': 'Chargement...',
+        'common.error': 'Erreur',
         'common.noResults': 'Aucun résultat trouvé',
         'common.dashboard': 'Tableau de bord',
         'common.continue': 'Continuer',
@@ -1115,6 +1132,8 @@ const translations = {
         'grading.bulk.selected': '{0} étudiants sélectionnés',
         'grading.bulk.grade_selected': 'Noter la Sélection',
         'grading.bulk.publish_selected': 'Publier la Sélection',
+        'grading.bulk.error.ungraded_title': 'Étudiants non notés sélectionnés',
+        'grading.bulk.error.ungraded_desc': 'Il y a {0} étudiants sélectionnés qui n’ont pas encore été entièrement notés. Veuillez les noter avant de publier.',
         'grading.table.pts': 'PTS',
         'grading.filter.performance': 'Performance',
         'grading.violation.secure': 'PÉRIMÈTRE SÉCURISÉ',
@@ -1444,6 +1463,16 @@ const translations = {
         'exam.take.timeExtended.title': 'Temps prolongé ! 🎁',
         'exam.take.timeExtended.desc': "L'instructeur vous a accordé du temps supplémentaire pour cet examen.",
         'exam.take.questionStatus': 'Question {0} sur {1}',
+        'exam.take.questionUpdated': 'Question mise à jour : {0}',
+        'exam.take.questionDeleted': 'Une question a été supprimée de l\'examen et votre réponse a été réinitialisée.',
+        'exam.take.answerResetDesc': 'Votre réponse pour cette question a été réinitialisée en raison d\'un changement de structure.',
+        'exam.take.newQuestionAdded': 'Nouvelle question ajoutée !',
+        'exam.take.newQuestionAddedDesc': 'Une nouvelle question a été ajoutée à l\'examen.',
+        'exam.take.violationsCleared.title': 'Avertissements réinitialisés',
+        'exam.take.violationsCleared.desc': 'Vos violations de sécurité ont été effacées par l\'instructeur. Vous pouvez continuer votre examen.',
+        'exam.take.status.live': 'EN DIRECT',
+        'exam.take.status.reconnecting': 'RECONNEXION',
+        'exam.take.status.offline': 'HORS LIGNE',
 
         // Monitor - General
         'monitor.title': 'Surveillance en Direct',
@@ -1464,6 +1493,7 @@ const translations = {
         'monitor.noActive': 'AUCUN ÉTUDIANT ACTIF',
         'monitor.noViolations': 'PÉRIMÈTRE SÉCURISÉ',
         'monitor.noAttempts': 'AUCUNE TENTATIVE',
+        'monitor.offline': 'HORS LIGNE',
         'monitor.lastActivity': 'Dernière activité',
         'monitor.answered': 'RÉPONDU',
         'monitor.ago': 'il y a',
@@ -1482,6 +1512,8 @@ const translations = {
         'monitor.action.forceSubmit.confirm': 'Forcer la soumission ? L\'étudiant sera immédiatement verrouillé.',
         'monitor.action.pause': 'Suspendre Session',
         'monitor.action.resume': 'Reprendre Session',
+        'monitor.action.message_individual': 'Message Direct',
+        'monitor.action.message_individual.desc': 'Envoyer une notification privée à cet étudiant.',
         'monitor.action.extend_time': 'Prolonger Durée',
         'monitor.action.extend_time.prompt': 'Minutes à ajouter à cette session :',
         'monitor.action.extend_time.placeholder': 'Minutes (ex: 10)',

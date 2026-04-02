@@ -53,6 +53,7 @@ describe('Instructor Exams', function () {
     });
 
     it('can add questions to an exam', function () {
+        Event::fake();
         $exam = Exam::factory()->for($this->instructor, 'instructor')->create();
 
         $questionData = [
@@ -137,6 +138,7 @@ describe('Student Exams', function () {
     });
 
     it('can start an exam attempt', function () {
+        Event::fake();
         $exam = Exam::factory()
             ->published()
             ->for($this->instructor, 'instructor')

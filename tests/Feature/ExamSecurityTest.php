@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\Exam\ExamViolationLogged;
+use App\Events\ExamViolationLogged;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\User;
@@ -44,6 +44,7 @@ describe('Exam Security', function () {
     });
 
     it('can auto-submit exam when violation limit reached', function () {
+        Event::fake();
         $exam = Exam::factory()->for($this->instructor, 'instructor')->create();
         $attempt = ExamAttempt::factory()
             ->for($exam)

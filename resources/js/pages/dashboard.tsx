@@ -41,10 +41,10 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('common.dashboard')} />
-            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+            <div className="flex h-full w-full flex-1 flex-col gap-6 p-4 sm:p-6">
                 {/* Welcome Section */}
-                <div className="rounded-xl bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground shadow-lg">
-                    <h1 className="text-2xl font-bold">
+                <div className="rounded-xl bg-gradient-to-br from-primary to-primary/80 p-5 sm:p-6 text-primary-foreground shadow-lg">
+                    <h1 className="text-xl sm:text-2xl font-bold break-words">
                         {t('dashboard.welcome')}, {auth.user.name}!
                     </h1>
                     <p className="mt-1 opacity-90">
@@ -64,8 +64,8 @@ function InstructorDashboard({ t }: { t: TFunction }) {
     return (
         <>
             {/* Quick Actions - Fixed height cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Link href="/exams/create" className="group">
+            <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Link href="/exams/create" className="group min-w-0 overflow-hidden">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
@@ -81,7 +81,7 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                     </Card>
                 </Link>
 
-                <Link href="/exams" className="group">
+                <Link href="/exams" className="group min-w-0 overflow-hidden">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-amber-500/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-emerald-500/10 p-3 transition-transform group-hover:scale-110">
@@ -97,7 +97,7 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                     </Card>
                 </Link>
 
-                <Link href="/exams" className="group">
+                <Link href="/exams" className="group min-w-0 overflow-hidden">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
@@ -111,7 +111,7 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                     </Card>
                 </Link>
 
-                <Link href="/exams" className="group">
+                <Link href="/exams" className="group min-w-0 overflow-hidden">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-amber-500/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-amber-500/10 p-3 transition-transform group-hover:scale-110">
@@ -127,8 +127,8 @@ function InstructorDashboard({ t }: { t: TFunction }) {
             </div>
 
             {/* Main Content */}
-            <div className="grid gap-6 lg:grid-cols-2">
-                <Card className="flex flex-col">
+            <div className="grid w-full gap-6 lg:grid-cols-2">
+                <Card className="flex min-w-0 flex-col overflow-hidden">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2">
                             <div className="rounded-lg bg-primary/10 p-2">
@@ -194,7 +194,7 @@ function InstructorDashboard({ t }: { t: TFunction }) {
                     </div>
                 </Card>
 
-                <Card className="flex flex-col">
+                <Card className="flex min-w-0 flex-col overflow-hidden">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2">
                             <div className="rounded-lg bg-emerald-500/10 p-2">
@@ -240,8 +240,8 @@ function StudentDashboard({ t }: { t: TFunction }) {
     return (
         <>
             {/* Quick Actions - Fixed height cards */}
-            <div className="grid gap-4 sm:grid-cols-3">
-                <Link href="/student/exams" className="group">
+            <div className="grid w-full gap-4 sm:grid-cols-3">
+                <Link href="/student/exams" className="group min-w-0 overflow-hidden">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-amber-500/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-emerald-500/10 p-3 transition-transform group-hover:scale-110">
@@ -257,7 +257,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                     </Card>
                 </Link>
 
-                <Link href="/student/exams" className="group">
+                <Link href="/student/exams" className="group min-w-0 overflow-hidden">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
@@ -273,7 +273,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                     </Card>
                 </Link>
 
-                <Link href="/student/results" className="group">
+                <Link href="/student/results" className="group min-w-0 overflow-hidden">
                     <Card className="h-full min-h-[140px] cursor-pointer border-2 border-border transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <div className="mb-3 rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110">
@@ -289,8 +289,8 @@ function StudentDashboard({ t }: { t: TFunction }) {
             </div>
 
             {/* Info Cards */}
-            <div className="grid gap-6 lg:grid-cols-2">
-                <Card className="flex flex-col">
+            <div className="grid w-full gap-6 lg:grid-cols-2">
+                <Card className="flex min-w-0 flex-col overflow-hidden">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2">
                             <div className="rounded-lg bg-primary/10 p-2">
@@ -356,7 +356,7 @@ function StudentDashboard({ t }: { t: TFunction }) {
                     </div>
                 </Card>
 
-                <Card className="flex flex-col border-amber-500/20">
+                <Card className="flex min-w-0 flex-col overflow-hidden border-amber-500/20">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                             <div className="rounded-lg bg-amber-500/10 p-2">

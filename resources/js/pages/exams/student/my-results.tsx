@@ -52,16 +52,16 @@ export default function MyResults({ attempts = [] }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('student.results.title')} />
             
-            <div className="flex flex-col gap-6 p-6 max-w-6xl mx-auto">
-                <div className="flex items-center justify-between">
-                    <div>
+            <div className="flex w-full flex-col gap-6 p-4 sm:p-6 max-w-6xl mx-auto">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                            <Button variant="ghost" size="icon" asChild className="rounded-full -ml-2">
+                            <Button variant="ghost" size="icon" asChild className="rounded-full -ml-2 shrink-0">
                                 <Link href="/student/exams">
                                     <ArrowLeftIcon className="size-5" />
                                 </Link>
                             </Button>
-                            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-foreground uppercase">
+                            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-foreground uppercase break-words">
                                 {t('student.results.title')}
                             </h1>
                         </div>
@@ -70,7 +70,7 @@ export default function MyResults({ attempts = [] }: Props) {
                         </p>
                     </div>
                     
-                    <div className="relative w-64">
+                    <div className="relative w-full sm:w-64 shrink-0">
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input 
                             placeholder={t('common.search')} 
@@ -89,44 +89,44 @@ export default function MyResults({ attempts = [] }: Props) {
                             return (
                                 <Card key={attempt.id} className="group overflow-hidden border-border hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300">
                                     <CardContent className="p-0">
-                                        <div className="flex items-center p-6 gap-6">
+                                        <div className="flex flex-wrap items-center p-4 sm:p-6 gap-4">
                                             {/* Score Circle */}
                                             <div className={cn(
-                                                "size-20 rounded-2xl flex flex-col items-center justify-center shrink-0 border-2 transition-transform group-hover:scale-110 duration-500",
+                                                "size-16 sm:size-20 rounded-2xl flex flex-col items-center justify-center shrink-0 border-2 transition-transform group-hover:scale-110 duration-500",
                                                 passed ? "bg-emerald-50 border-emerald-200 text-emerald-600" : "bg-rose-50 border-rose-200 text-rose-600"
                                             )}>
-                                                <span className="text-2xl font-black leading-none">{Math.round(attempt.percentage)}</span>
+                                                <span className="text-xl sm:text-2xl font-black leading-none">{Math.round(attempt.percentage)}</span>
                                                 <span className="text-[10px] font-black uppercase opacity-70">%</span>
                                             </div>
 
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
+                                                <div className="flex flex-wrap items-center gap-2 mb-1">
                                                     <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-foreground truncate">
                                                         {attempt.exam.title}
                                                     </h3>
                                                     <Badge variant={passed ? "default" : "destructive"} className={cn(
-                                                        "uppercase text-[9px] font-black px-1.5 h-4 tracking-tighter",
+                                                        "uppercase text-[9px] font-black px-1.5 h-4 tracking-tighter shrink-0",
                                                         passed ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/30" : "bg-rose-500/20 text-rose-600 border-rose-500/30"
                                                     )}>
                                                         {passed ? t('student.results.passed').toUpperCase() : t('student.results.failed').toUpperCase()}
                                                     </Badge>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                                <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-muted-foreground uppercase tracking-widest">
                                                     <div className="flex items-center gap-1.5">
-                                                        <TrophyIcon className="size-3.5" />
+                                                        <TrophyIcon className="size-3.5 shrink-0" />
                                                         {attempt.score} / {attempt.exam.total_points} {t('exam.points')}
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 border-l pl-4">
-                                                        <CalendarIcon className="size-3.5" />
+                                                    <div className="flex items-center gap-1.5">
+                                                        <CalendarIcon className="size-3.5 shrink-0" />
                                                         {formatDate(attempt.published_at)}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Actions */}
-                                            <Button asChild className="rounded-xl font-black uppercase tracking-widest text-[10px] px-6 h-12 bg-slate-900 hover:bg-emerald-600 transition-all shadow-lg hover:shadow-emerald-500/20">
+                                            <Button asChild className="w-full sm:w-auto rounded-xl font-black uppercase tracking-widest text-[10px] px-6 h-12 bg-slate-900 hover:bg-emerald-600 transition-all shadow-lg hover:shadow-emerald-500/20">
                                                 <Link href={`/student/exams/${attempt.exam.id}/attempts/${attempt.id}`}>
                                                     <EyeIcon className="mr-2 size-4" />
                                                     {t('student.results.viewDetail')}

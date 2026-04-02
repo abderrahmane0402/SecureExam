@@ -21,15 +21,26 @@ export default defineConfig({
             formVariants: true,
         }),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: (id) => {
+                    if (id.includes('node_modules')) {
+                        return 'vendor';
+                    }
+                },
+            },
+        },
+    },
     esbuild: {
         jsx: 'automatic',
     },
-    // server: {
-    //     host: '0.0.0.0',
-    //     port: 5173,
-    //     cors: true,
-    //     hmr: {
-    //         host: '10.116.227.56', // ← YOUR PC IP
-    //     },
-    // },
+    server: {
+        host: '0.0.0.0',
+        port: 5173,
+        cors: true,
+        hmr: {
+            host: '192.168.0.187', // ← YOUR PC IP
+        },
+    },
 });

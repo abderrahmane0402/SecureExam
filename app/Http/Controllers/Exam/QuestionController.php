@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Exam;
 
+use App\Events\ExamQuestionsUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Exam\StoreQuestionRequest;
 use App\Models\Exam;
@@ -28,7 +29,7 @@ class QuestionController extends Controller
             $imagePath = $request->file('image')->store('question-images', 'public');
         }
 
-        DB::transaction(function () use ($validated, $exam, $imagePath): void {
+        $question = DB::transaction(function () use ($validated, $exam, $imagePath) {
             // Get the next order if not specified
             $order = $validated['order'] ?? $exam->questions()->max('order') + 1;
 
@@ -60,7 +61,17 @@ class QuestionController extends Controller
                     ['content' => 'False', 'is_correct' => $validated['correct_answer'] === 'false', 'order' => 1],
                 ]);
             }
+
+            return $question;
         });
+
+        // Broadcast change
+        broadcast(new ExamQuestionsUpdated(
+            $exam->id,
+            'created',
+            $question->id,
+            $question->content
+        ));
 
         return back()->with('success', 'Question added successfully.');
     }
@@ -121,7 +132,18 @@ class QuestionController extends Controller
                     ['content' => 'False', 'is_correct' => $validated['correct_answer'] === 'false', 'order' => 1],
                 ]);
             }
+
+            // SAFETY RESET: Delete all student answers for this question because the question changed
+            $question->answers()->delete();
         });
+
+        // Broadcast change
+        broadcast(new ExamQuestionsUpdated(
+            $exam->id,
+            'updated',
+            $question->id,
+            $question->content
+        ));
 
         return back()->with('success', 'Question updated successfully.');
     }
@@ -137,12 +159,26 @@ class QuestionController extends Controller
             abort(404);
         }
 
+        $questionId = $question->id;
+        $questionContent = $question->content;
+
         // Delete associated image
         if ($question->image_path) {
             Storage::disk('public')->delete($question->image_path);
         }
 
+        // Answers are deleted automatically by DB cascade, but we can do it explicitly if needed
+        // $question->answers()->delete();
+
         $question->delete();
+
+        // Broadcast change
+        broadcast(new ExamQuestionsUpdated(
+            $exam->id,
+            'deleted',
+            $questionId,
+            $questionContent
+        ));
 
         return back()->with('success', 'Question deleted successfully.');
     }
@@ -193,19 +229,36 @@ class QuestionController extends Controller
             $nextOrder = $exam->questions()->max('order') + 1;
 
             foreach ($questions as $qData) {
+                // Determine final type
+                $type = $qData['type'];
+                
+                // Auto-detect True/False if options are exactly True and False
+                $optionTexts = array_map('strtolower', array_values($qData['options']));
+                if (count($optionTexts) === 2 && in_array('true', $optionTexts) && in_array('false', $optionTexts)) {
+                    $type = 'true_false';
+                }
+
+                // If no options, default to short_text or essay
+                if (empty($qData['options']) && $type === 'multiple_choice_single') {
+                    $type = 'essay';
+                }
+
                 $question = $exam->questions()->create([
-                    'type' => 'multiple_choice_single',
+                    'type' => $type,
                     'content' => $qData['content'],
-                    'points' => 1,
+                    'points' => $qData['points'] ?? 1,
                     'order' => $nextOrder++,
                 ]);
 
-                foreach ($qData['options'] as $letter => $content) {
-                    $question->options()->create([
-                        'content' => $content,
-                        'is_correct' => $letter === $qData['correct_letter'],
-                        'order' => ord($letter) - ord('A'),
-                    ]);
+                // Create options for choice-based questions
+                if (!empty($qData['options'])) {
+                    foreach ($qData['options'] as $letter => $content) {
+                        $question->options()->create([
+                            'content' => $content,
+                            'is_correct' => in_array($letter, $qData['correct_letters'] ?? []),
+                            'order' => ord($letter) - ord('A'),
+                        ]);
+                    }
                 }
             }
         });

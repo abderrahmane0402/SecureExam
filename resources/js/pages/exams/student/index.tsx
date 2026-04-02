@@ -63,15 +63,15 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('student.exams.title')} />
-            <div className="flex flex-col gap-6 p-6">
-                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-white shadow-lg flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-black uppercase tracking-tight">{t('student.exams.title')}</h1>
-                        <p className="mt-1 opacity-90 font-medium">
+            <div className="flex w-full flex-col gap-6 p-4 sm:p-6">
+                <div className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 p-5 sm:p-6 text-white shadow-lg flex flex-wrap justify-between items-start gap-4">
+                    <div className="min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight break-words">{t('student.exams.title')}</h1>
+                        <p className="mt-1 opacity-90 font-medium text-sm sm:text-base">
                             {t('student.exams.subtitle')}
                         </p>
                     </div>
-                    <Button asChild variant="secondary" className="font-black bg-white/20 hover:bg-white/30 border-white/20 text-white backdrop-blur-md">
+                    <Button asChild variant="secondary" className="shrink-0 font-black bg-white/20 hover:bg-white/30 border-white/20 text-white backdrop-blur-md">
                         <Link href="/student/results">
                             <TrophyIcon className="mr-2 size-4" />
                             {t('student.results.title')}
@@ -80,12 +80,12 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                 </div>
 
                 {/* Available Exams */}
-                <section>
+                <section className="w-full min-w-0">
                     <h2 className="mb-4 text-lg font-semibold">
                         {t('student.exams.available')} ({availableExams.length})
                     </h2>
                     {availableExams.length > 0 ? (
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {availableExams.map((exam) => {
                                 const status = getExamStatus(exam);
                                 const isInProgress =
@@ -95,7 +95,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                 return (
                                     <Card
                                         key={exam.id}
-                                        className="flex h-full min-h-[280px] flex-col"
+                                        className="flex h-full min-h-[280px] flex-col overflow-hidden"
                                     >
                                         <CardHeader className="pb-3">
                                             <div className="flex items-start justify-between gap-2">
@@ -149,7 +149,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                                 </div>
                                             </div>
 
-                                            <div className="mt-4 flex items-center justify-between border-t pt-4">
+                                            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t pt-4">
                                                 <span className="text-sm text-muted-foreground">
                                                     {t('exam.attempts')}:{' '}
                                                     <span className="font-medium text-foreground">
@@ -204,18 +204,18 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
 
                 {/* Completed Exams */}
                 {completedExams.length > 0 && (
-                    <section>
+                    <section className="w-full min-w-0">
                         <h2 className="mb-4 text-lg font-semibold">
                             {t('student.exams.completed')} ({completedExams.length})
                         </h2>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {completedExams.map((exam) => {
                                 const attempt = exam.latest_attempt;
 
                                 return (
                                     <Card
                                         key={exam.id}
-                                        className="flex h-full min-h-[200px] flex-col"
+                                        className="flex h-full min-h-[200px] flex-col overflow-hidden"
                                     >
                                         <CardHeader className="pb-3">
                                             <div className="flex items-start justify-between gap-2">
@@ -240,7 +240,7 @@ export default function StudentExamsIndex({ exams = [] }: Props) {
                                             </div>
                                         </CardHeader>
                                         <CardContent className="flex flex-1 flex-col">
-                                            <div className="flex flex-1 items-center justify-between border-t pt-4">
+                                            <div className="flex flex-1 flex-wrap items-center justify-between gap-3 border-t pt-4">
                                                 <div>
                                                     {attempt?.is_published ? (
                                                         <>

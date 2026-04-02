@@ -6,14 +6,6 @@ class AikenParserService
 {
     /**
      * Parse Aiken formatted text into an array of questions.
-     *
-     * Example Aiken format:
-     * What is the capital of France?
-     * A) Paris
-     * B) Lyon
-     * C) Marseille
-     * D) Berlin
-     * ANSWER: A
      */
     public function parse(string $text): array
     {
@@ -23,37 +15,78 @@ class AikenParserService
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) {
-                continue;
-            }
+            if (empty($line)) continue;
 
-            // Check if it's an option (starts with A) B) C) etc or A. B. C.)
+            // 1. Check for Options (A) B) C) ...)
             if (preg_match('/^([A-Z])[\)\.]\s*(.*)$/', $line, $matches)) {
                 if ($currentQuestion) {
                     $currentQuestion['options'][$matches[1]] = $matches[2];
                 }
             }
-            // Check if it's the answer line
-            elseif (preg_match('/^ANSWER:\s*([A-Z])$/', $line, $matches)) {
+            // 2. Check for Answer line (Saves the question)
+            elseif (preg_match('/^ANSWER:\s*([A-Z,\s]+)$/', $line, $matches)) {
                 if ($currentQuestion) {
-                    $currentQuestion['correct_letter'] = $matches[1];
+                    $letters = preg_split('/[,\s]+/', trim($matches[1]), -1, PREG_SPLIT_NO_EMPTY);
+                    $currentQuestion['correct_letters'] = $letters;
+                    
+                    if ($currentQuestion['type'] === 'multiple_choice_single' && count($letters) > 1) {
+                        $currentQuestion['type'] = 'multiple_choice_multiple';
+                    }
+                    
                     $questions[] = $currentQuestion;
                     $currentQuestion = null;
                 }
             }
-            // Otherwise, it's the question content (if we are not already in one)
+            // 3. Check for Points line
+            elseif (preg_match('/^POINTS:\s*(\d+)$/i', $line, $matches)) {
+                if ($currentQuestion) {
+                    $currentQuestion['points'] = (int)$matches[1];
+                }
+            }
+            // 4. Check for Type line
+            elseif (preg_match('/^TYPE:\s*(.*)$/i', $line, $matches)) {
+                if ($currentQuestion) {
+                    $type = strtolower(trim($matches[1]));
+                    $map = [
+                        'mcq' => 'multiple_choice_single',
+                        'multiple' => 'multiple_choice_multiple',
+                        'tf' => 'true_false',
+                        'text' => 'short_text',
+                        'essay' => 'essay'
+                    ];
+                    $currentQuestion['type'] = $map[$type] ?? $type;
+                }
+            }
+            // 5. New Question or Content
             else {
+                // If we encounter a new line that doesn't look like an option/answer/point/type,
+                // and we ALREADY have a question, it might mean the PREVIOUS one was an essay/text 
+                // and we are now starting a NEW one.
+                
+                // Logic: A new question starts if the current line doesn't match patterns AND 
+                // we've already defined some options or a type for the current one.
+                if ($currentQuestion !== null && (!empty($currentQuestion['options']) || $currentQuestion['type'] !== 'multiple_choice_single')) {
+                    $questions[] = $currentQuestion;
+                    $currentQuestion = null;
+                }
+
                 if ($currentQuestion === null) {
                     $currentQuestion = [
                         'content' => $line,
                         'options' => [],
-                        'correct_letter' => null,
+                        'correct_letters' => [],
+                        'points' => 1,
+                        'type' => 'multiple_choice_single'
                     ];
                 } else {
-                    // Append to existing content if multiple lines
-                    $currentQuestion['content'] .= "\n".$line;
+                    $currentQuestion['content'] .= "\n" . $line;
                 }
             }
+        }
+
+        // Final Flush: Save the last question if it wasn't an MCQ (which saves on ANSWER:)
+        if ($currentQuestion !== null) {
+            $questions[] = $currentQuestion;
         }
 
         return $questions;

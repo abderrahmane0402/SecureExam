@@ -80,6 +80,10 @@ export function useExamSecurity({
     const reloadViolationLoggedRef = useRef(false);
     const isResumingRef = useRef(false);
     const hasEnteredFullscreenRef = useRef(false);
+    const isPausedRef = useRef(isPaused);
+
+    // Sync ref with state for instant access in listeners
+    isPausedRef.current = isPaused;
 
     // Store callbacks in refs to avoid effect re-runs
     const onViolationRef = useRef(onViolation);
@@ -147,7 +151,7 @@ export function useExamSecurity({
             durationSeconds?: number,
             returnedAt?: string,
         ) => {
-            if (!enabled || isSubmittingRef.current || isPaused) return;
+            if (!enabled || isSubmittingRef.current || isPausedRef.current) return;
 
             const severity =
                 durationSeconds !== undefined
@@ -236,7 +240,7 @@ export function useExamSecurity({
     );
 
     const startReloadSecuritySequence = useCallback(() => {
-        if (!enabled || reloadTimerRef.current || isSubmittingRef.current || isPaused) return;
+        if (!enabled || reloadTimerRef.current || isSubmittingRef.current || isPausedRef.current) return;
 
         lockExam('Security check: Please return to fullscreen to continue.');
         setReloadCountdown(10);
@@ -274,7 +278,7 @@ export function useExamSecurity({
 
     const handleFocusLoss = useCallback(
         (type: string, details: string) => {
-            if (!enabled || !isInitializedRef.current || isSubmittingRef.current || isPaused) return;
+            if (!enabled || !isInitializedRef.current || isSubmittingRef.current || isPausedRef.current) return;
 
             if (focusLossEventRef.current) {
                 if (type === 'tab_switch' && focusLossEventRef.current.type === 'window_blur') {
@@ -294,7 +298,7 @@ export function useExamSecurity({
 
             const checkInterval = 1000;
             kickTimerRef.current = setInterval(() => {
-                if (!enabled || !focusLossEventRef.current || isSubmittingRef.current || isPaused) {
+                if (!enabled || !focusLossEventRef.current || isSubmittingRef.current || isPausedRef.current) {
                     if (kickTimerRef.current) clearInterval(kickTimerRef.current);
                     return;
                 }
@@ -477,7 +481,7 @@ export function useExamSecurity({
         const sessionInterval = setInterval(validateSession, 60000);
 
         if (enabled) {
-            if (!document.fullscreenElement && !isInitializedRef.current && !isSubmittingRef.current && isResumingRef.current && !isPaused) {
+            if (!document.fullscreenElement && !isInitializedRef.current && !isSubmittingRef.current && isResumingRef.current && !isPausedRef.current) {
                 setTimeout(() => {
                     startReloadSecuritySequence();
                 }, 10);
@@ -488,19 +492,19 @@ export function useExamSecurity({
             }, 3000);
 
             const handleFullscreenChange = () => {
-                if (!isPaused && !document.fullscreenElement && !isSubmittingRef.current && (isResumingRef.current || hasEnteredFullscreenRef.current)) {
+                if (!isPausedRef.current && !document.fullscreenElement && !isSubmittingRef.current && (isResumingRef.current || hasEnteredFullscreenRef.current)) {
                     handleFocusLoss('fullscreen_exit', 'User exited fullscreen mode');
                 }
             };
 
             const handleVisibilityChange = () => {
-                if (!isPaused && document.hidden && isInitializedRef.current) {
+                if (!isPausedRef.current && document.hidden && isInitializedRef.current) {
                     handleFocusLoss('tab_switch', 'User switched to another tab');
                 }
             };
 
             const handleWindowBlur = () => {
-                if (!isPaused && isInitializedRef.current && !isSubmittingRef.current) {
+                if (!isPausedRef.current && isInitializedRef.current && !isSubmittingRef.current) {
                     handleFocusLoss('window_blur', 'Browser window lost focus');
                 }
             };

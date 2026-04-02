@@ -84,6 +84,13 @@ class AutoSubmitAbandonedExams extends Command
                         'critical'
                     ));
 
+                    // Notify status change
+                    broadcast(new ExamAttemptStatusChanged(
+                        $attempt->exam_id,
+                        $attempt->student_id,
+                        ExamAttempt::STATUS_AUTO_SUBMITTED
+                    ));
+
                     // Grade and finalize
                     $gradingService->gradeAttempt($attempt);
 
@@ -110,6 +117,10 @@ class AutoSubmitAbandonedExams extends Command
 
         if ($count > 0) {
             $this->info("Successfully auto-submitted {$count} abandoned/expired exams.");
+        }
+    }
+}
+his->info("Successfully auto-submitted {$count} abandoned/expired exams.");
         }
     }
 }

@@ -22,19 +22,19 @@ class StudentExamController extends Controller
                 $query->where('student_id', $user->id);
             })
             ->where('is_published', true)
-            ->with(['instructor:id,name'])
+            ->with([
+                'instructor:id,name',
+                'attempts' => function ($query) use ($user) {
+                    $query->where('student_id', $user->id)->latest();
+                }
+            ])
             ->withCount(['questions'])
             ->get()
-            ->map(function ($exam) use ($user) {
-                $completedAttempts = $exam->attempts()
-                    ->where('student_id', $user->id)
-                    ->whereIn('status', ['submitted', 'graded', 'auto_submitted'])
-                    ->count();
-
-                $latestAttempt = $exam->attempts()
-                    ->where('student_id', $user->id)
-                    ->latest()
-                    ->first();
+            ->map(function ($exam) {
+                $attempts = $exam->attempts;
+                
+                $completedAttempts = $attempts->whereIn('status', ['submitted', 'graded', 'auto_submitted'])->count();
+                $latestAttempt = $attempts->first();
 
                 return [
                     'id' => $exam->id,

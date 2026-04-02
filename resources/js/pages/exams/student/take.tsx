@@ -33,12 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useExamSecurity } from '@/hooks/use-exam-security';
 import { useLanguage } from '@/hooks/use-language';
 import { cn } from '@/lib/utils';
-import type {
-    Exam,
-    ExamAttempt,
-    Question,
-    QuestionOption,
-} from '@/types';
+import type { Exam, ExamAttempt, Question, QuestionOption } from '@/types';
 
 interface QuestionWithAnswer extends Question {
     options: QuestionOption[];
@@ -93,14 +88,60 @@ export default function TakeExam({
     const [saveError, setSaveError] = useState(false);
     const [examStarted, setExamStarted] = useState(() => {
         // Auto-start if attempt is already in progress (remaining time < duration)
-        const isAlreadyStarted = attempt.remaining_time < exam.duration_minutes * 60;
+        const isAlreadyStarted =
+            attempt.remaining_time < exam.duration_minutes * 60;
         return isAlreadyStarted;
     });
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
     const [isPaused, setIsPaused] = useState(attempt.is_paused);
+    const [isKickedState, setIsKickedState] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState<
+        'stable' | 'unstable' | 'offline'
+    >('stable');
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const currentQuestion = questions[currentIndex];
+
+    // Monitor WebSocket/Internet health
+    useEffect(() => {
+        const handleOnline = () => setConnectionStatus('stable');
+        const handleOffline = () => setConnectionStatus('offline');
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        // Check if Echo is actually connected
+        const checkEcho = setInterval(() => {
+            const echo = (window as any).Echo;
+            if (
+                echo &&
+                echo.connector.pusher.connection.state !== 'connected'
+            ) {
+                setConnectionStatus('unstable');
+            } else if (window.navigator.onLine) {
+                setConnectionStatus('stable');
+            }
+        }, 5000);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            clearInterval(checkEcho);
+        };
+    }, []);
+
+    // ... (rest of listeners)
+
+    // Real-time Individual Message Listener
+    useEcho(`exam-room.${exam.id}`, '.IndividualMessageBroadcast', (e: any) => {
+        if (e.student_id == attempt.student_id) {
+            toast.info(e.message, {
+                icon: <SendIcon className="size-5 text-indigo-600" />,
+                description: t('exam.take.fromInstructor', [e.teacher_name]),
+                duration: 15000,
+            });
+        }
+    });
 
     // Auto-submit handler
     const handleAutoSubmit = useCallback(() => {
@@ -122,7 +163,7 @@ export default function TakeExam({
         returnToExam,
         setSubmitting,
         isLocked,
-        isKicked,
+        isKicked: isKickedFromSecurity,
         lockReason,
         reloadCountdown,
         hasEnteredFullscreen,
@@ -135,11 +176,16 @@ export default function TakeExam({
             setViolationCount(count);
 
             // Show premium security toast warning
-            toast.error(t(`violation.${type}` as any) || type.replace(/_/g, ' '), {
-                icon: <ShieldAlertIcon className="size-5 text-destructive" />,
-                description: `${t('exam.take.securityWarning')} ${t('exam.take.securityAttempts', [count, 5])}`,
-                duration: 6000,
-            });
+            toast.error(
+                t(`violation.${type}` as any) || type.replace(/_/g, ' '),
+                {
+                    icon: (
+                        <ShieldAlertIcon className="size-5 text-destructive" />
+                    ),
+                    description: `${t('exam.take.securityWarning')} ${t('exam.take.securityAttempts', [count, 5])}`,
+                    duration: 6000,
+                },
+            );
         },
         onAutoSubmit: handleAutoSubmit,
         onPauseStatusChange: (paused) => {
@@ -150,20 +196,27 @@ export default function TakeExam({
                 }
             }
         },
-        enabled: examStarted && !new URLSearchParams(window.location.search).has('no_security'),
+        enabled:
+            examStarted &&
+            !new URLSearchParams(window.location.search).has('no_security'),
         isPaused: isPaused,
         initialSessionToken: session_token,
     });
 
-    // Sync isPaused with props (for refreshes or Inertia updates)
+    const isKicked = isKickedState || isKickedFromSecurity;
+
+    // Sync state with props when they change from server-side updates
     useEffect(() => {
-        if (attempt.is_paused !== isPaused) {
-            setIsPaused(attempt.is_paused);
-            if (attempt.is_paused) {
-                exitFullscreen();
-            }
-        }
-    }, [attempt.is_paused, isPaused, exitFullscreen]);
+        setIsPaused(attempt.is_paused);
+    }, [attempt.is_paused]);
+
+    useEffect(() => {
+        setViolationCount(attempt.violation_count || 0);
+    }, [attempt.violation_count]);
+
+    useEffect(() => {
+        setTimeRemaining(attempt.remaining_time);
+    }, [attempt.remaining_time]);
 
     // Real-time Teacher Broadcast Listener
     useEcho(`exam-room.${exam.id}`, '.TeacherMessageBroadcast', (e: any) => {
@@ -203,6 +256,71 @@ export default function TakeExam({
         }
     });
 
+    // Real-time Status Change Listener (Force Submit / Kick)
+    useEcho(`exam-room.${exam.id}`, '.ExamAttemptStatusChanged', (e: any) => {
+        // ONLY act if this is about THIS student
+        if (e.student_id != attempt.student_id) return;
+
+        const kickStatuses = ['submitted', 'auto_submitted', 'graded', 'blocked'];
+        
+        if (kickStatuses.includes(e.status)) {
+            setIsKickedState(true);
+            // Small delay to let them see the "Submitting..." overlay before reload
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else if (e.status === 'violations_cleared') {
+            setViolationCount(0);
+            toast.success(t('exam.take.violationsCleared.title'), {
+                description: t('exam.take.violationsCleared.desc'),
+                icon: <ShieldAlertIcon className="size-5 text-emerald-500" />,
+                duration: 8000,
+            });
+        }
+    });
+
+    // Real-time Question Updates Listener
+    useEcho(`exam-room.${exam.id}`, '.ExamQuestionsUpdated', (e: any) => {
+        // Silently reload questions from the server
+        router.reload({
+            only: ['questions'],
+            onSuccess: () => {
+                // If a question was updated or deleted, reset the local answer for it
+                if (
+                    e.question_id &&
+                    (e.change_type === 'updated' || e.change_type === 'deleted')
+                ) {
+                    setAnswers((prev) => {
+                        const next = { ...prev };
+                        delete next[e.question_id];
+                        return next;
+                    });
+
+                    // Inform the student
+                    const message =
+                        e.change_type === 'updated'
+                            ? t('exam.take.questionUpdated', [
+                                e.question_text || '',
+                            ])
+                            : t('exam.take.questionDeleted');
+
+                    toast.warning(message, {
+                        description: t('exam.take.answerResetDesc'),
+                        duration: 8000,
+                        icon: (
+                            <AlertTriangleIcon className="size-5 text-amber-500" />
+                        ),
+                    });
+                } else if (e.change_type === 'created') {
+                    toast.info(t('exam.take.newQuestionAdded'), {
+                        description: t('exam.take.newQuestionAddedDesc'),
+                        duration: 5000,
+                    });
+                }
+            },
+        });
+    });
+
     // Handle starting the exam (requires user gesture for fullscreen)
     const handleStartExam = async () => {
         const success = await enterFullscreen();
@@ -227,7 +345,8 @@ export default function TakeExam({
 
     // Timer countdown - only runs after exam starts
     useEffect(() => {
-        if (!examStarted || isLocked || isFullscreen === false || isPaused) return;
+        if (!examStarted || isLocked || isFullscreen === false || isPaused)
+            return;
 
         const interval = setInterval(() => {
             setTimeRemaining((prev) => {
@@ -262,19 +381,26 @@ export default function TakeExam({
             setSaving(true);
             setSaveError(false);
             try {
-                const response = await fetch(`/exam/attempt/${attempt.id}/answer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'))?.[2] || ''),
-                        'X-Requested-With': 'XMLHttpRequest',
+                const response = await fetch(
+                    `/exam/attempt/${attempt.id}/answer`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-XSRF-TOKEN': decodeURIComponent(
+                                document.cookie.match(
+                                    new RegExp('(^|;\\s*)XSRF-TOKEN=([^;]*)'),
+                                )?.[2] || '',
+                            ),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({
+                            question_id: questionId,
+                            ...data,
+                        }),
                     },
-                    body: JSON.stringify({
-                        question_id: questionId,
-                        ...data,
-                    }),
-                });
+                );
 
                 if (!response.ok) {
                     if (response.status === 403) {
@@ -297,21 +423,31 @@ export default function TakeExam({
     const handleAnswerChange = (
         questionId: number,
         data: { selected_options?: number[]; text_answer?: string },
+        isImmediate: boolean = false,
     ) => {
         setAnswers((prev) => ({ ...prev, [questionId]: data }));
 
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
-        saveTimeoutRef.current = setTimeout(() => {
+
+        if (isImmediate) {
             saveAnswer(questionId, data);
-        }, 1000);
+        } else {
+            saveTimeoutRef.current = setTimeout(() => {
+                saveAnswer(questionId, data);
+            }, 1000);
+        }
     };
 
     const handleSingleChoice = (optionId: number) => {
-        handleAnswerChange(currentQuestion.id, {
-            selected_options: [optionId],
-        });
+        handleAnswerChange(
+            currentQuestion.id,
+            {
+                selected_options: [optionId],
+            },
+            true,
+        );
     };
 
     const handleMultipleChoice = (optionId: number, checked: boolean) => {
@@ -319,15 +455,19 @@ export default function TakeExam({
         const updated = checked
             ? [...current, optionId]
             : current.filter((id) => id !== optionId);
-        handleAnswerChange(currentQuestion.id, { selected_options: updated });
+        handleAnswerChange(
+            currentQuestion.id,
+            { selected_options: updated },
+            true,
+        );
     };
 
     const handleTrueFalse = (value: string) => {
-        handleAnswerChange(currentQuestion.id, { text_answer: value });
+        handleAnswerChange(currentQuestion.id, { text_answer: value }, true);
     };
 
     const handleTextAnswer = (text: string) => {
-        handleAnswerChange(currentQuestion.id, { text_answer: text });
+        handleAnswerChange(currentQuestion.id, { text_answer: text }, false);
     };
 
     const toggleFlag = (questionId: number) => {
@@ -369,52 +509,64 @@ export default function TakeExam({
 
     const isLowTime = timeRemaining < 300;
 
+    // --- PRIORITY SCREEN LOGIC ---
+    // This ensures only ONE major panel is shown at a time, based on importance.
+    // --- PRIORITY SCREEN LOGIC (NESTED HIERARCHY) ---
     if (isKicked) {
         return (
             <>
                 <Head title="Submitting Exam..." />
-                <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
-                    <Loader2Icon className="size-16 animate-spin text-primary mb-6" />
-                    <h1 className="text-3xl font-black mb-2">{t('exam.take.submitting')}...</h1>
-                    <p className="text-muted-foreground font-medium">{t('exam.take.submitting.desc')}</p>
+                <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-background p-6 text-center text-foreground">
+                    <Loader2Icon className="mb-6 size-16 animate-spin text-primary" />
+                    <h1 className="mb-2 text-3xl font-black italic uppercase">
+                        {t('exam.take.submitting')}...
+                    </h1>
+                    <p className="font-medium text-muted-foreground">
+                        {t('exam.take.submitting.desc')}
+                    </p>
                 </div>
             </>
         );
-    }
-
-    if (!examStarted && !hasEnteredFullscreen) {
+    } else if (!examStarted) {
         return (
             <>
                 <Head title={`${t('exam.take.start')}: ${exam.title}`} />
                 <div className="flex min-h-screen items-center justify-center bg-background p-6">
-                    <Card className="w-full max-w-lg shadow-xl border-t-4 border-t-primary">
-                        <CardHeader className="text-center pt-8">
+                    <Card className="w-full max-w-lg border-t-4 border-t-primary shadow-xl">
+                        <CardHeader className="pt-8 text-center">
                             <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
                                 <FileTextIcon className="size-8 text-primary" />
                             </div>
-                            <CardTitle className="text-2xl font-black text-foreground tracking-tight">
+                            <CardTitle className="text-2xl font-black tracking-tight text-foreground">
                                 {exam.title}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-8 pb-10">
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 font-bold text-foreground border-b pb-2">
+                                <div className="flex items-center gap-2 border-b pb-2 font-bold text-foreground">
                                     <ClipboardCheckIcon className="size-5 text-primary" />
                                     {t('exam.take.beforeYouBegin')}
                                 </div>
                                 <ul className="space-y-4">
                                     {[1, 2, 3, 4].map((num) => (
-                                        <li key={num} className="flex gap-3 text-sm text-muted-foreground">
+                                        <li
+                                            key={num}
+                                            className="flex gap-3 text-sm text-muted-foreground"
+                                        >
                                             <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground">
                                                 {num}
                                             </div>
                                             {(t as any)(`exam.take.rule${num}`)}
                                         </li>
                                     ))}
-                                    <li className="flex gap-3 text-sm text-muted-foreground font-bold border-t pt-4">
+                                    <li className="flex gap-3 border-t pt-4 text-sm font-bold text-muted-foreground">
                                         <ClockIcon className="size-5 shrink-0 text-primary" />
                                         <span>
-                                            {t('exam.take.rule5')} {Math.floor(attempt.remaining_time / 60)} {t('exam.minutes')}
+                                            {t('exam.take.rule5')}{' '}
+                                            {Math.floor(
+                                                attempt.remaining_time / 60,
+                                            )}{' '}
+                                            {t('exam.minutes')}
                                         </span>
                                     </li>
                                 </ul>
@@ -424,13 +576,13 @@ export default function TakeExam({
                                 <Button
                                     type="button"
                                     onClick={handleStartExam}
-                                    className="w-full h-14 text-lg font-bold shadow-lg"
+                                    className="h-14 w-full text-lg font-bold shadow-lg"
                                     size="lg"
                                 >
                                     <MaximizeIcon className="mr-2 size-6" />
                                     {t('exam.take.start').toUpperCase()}
                                 </Button>
-                                <p className="mt-4 text-center text-[11px] text-slate-400 uppercase font-black tracking-widest">
+                                <p className="mt-4 text-center text-[11px] font-black tracking-widest text-slate-400 uppercase">
                                     {t('exam.take.enteringMode')}
                                 </p>
                             </div>
@@ -439,64 +591,82 @@ export default function TakeExam({
                 </div>
             </>
         );
-    }
-
-    if (isPaused) {
+    } else if (isPaused) {
         return (
             <>
                 <Head title="Exam Paused" />
-                <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm text-foreground p-6 text-center">
+                <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-background/95 p-6 text-center text-foreground backdrop-blur-sm">
                     <div className="mb-8 rounded-full bg-amber-500/20 p-6 ring-1 ring-amber-500/50">
-                        <PauseIcon className="size-16 text-amber-500 animate-pulse" />
+                        <PauseIcon className="size-16 animate-pulse text-amber-500" />
                     </div>
-                    <h2 className="text-4xl font-black tracking-tight uppercase mb-4">{t('exam.take.paused.title')}</h2>
-                    <p className="text-xl text-muted-foreground max-w-lg font-medium leading-relaxed mb-8">
+                    <h2 className="mb-4 text-4xl font-black tracking-tight uppercase italic">
+                        {t('exam.take.paused.title')}
+                    </h2>
+                    <p className="mb-8 max-w-lg text-xl leading-relaxed font-medium text-muted-foreground">
                         {t('exam.take.paused.desc')}
                     </p>
-                    <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-muted-foreground bg-muted/20 px-6 py-3 rounded-2xl border border-border italic">
-                        <div className="size-2 rounded-full bg-emerald-500 animate-ping" />
+                    <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/20 px-6 py-3 text-sm font-black tracking-widest text-muted-foreground uppercase italic">
+                        <div className="size-2 animate-ping rounded-full bg-emerald-500" />
                         {t('exam.take.paused.awaiting')}
                     </div>
                 </div>
             </>
         );
-    }
-
-    if (!isFullscreen && !new URLSearchParams(window.location.search).has('no_security')) {
+    } else if (
+        !isPaused &&
+        (isLocked ||
+            (!isFullscreen &&
+                !new URLSearchParams(window.location.search).has(
+                    'no_security',
+                )))
+    ) {
+        console.log(isPaused)
         return (
             <>
                 <Head title={t('exam.take.fullscreenRequired')} />
-                <div className="flex min-h-screen items-center justify-center bg-background p-4">
-                    <Card className="w-full max-w-md">
-                        <CardHeader className="text-center">
-                            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
-                                <MaximizeIcon className="size-8 text-primary" />
-                            </div>
-                            <CardTitle className="text-xl">
-                                {t('exam.take.fullscreenRequired')}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-center">
-                            <p className="text-muted-foreground">
-                                {t('exam.take.fullscreenDesc')}
-                            </p>
-
-                            {reloadCountdown !== null && (
-                                <div className="rounded-md bg-red-50 p-3 text-red-700">
-                                    <p className="font-medium animate-pulse">
-                                        {t('exam.take.returnWithin', [reloadCountdown])}
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-6 backdrop-blur-sm">
+                    <Card className="w-full max-w-sm border-2 border-destructive/50 shadow-2xl">
+                        <CardContent className="flex flex-col items-center space-y-6 py-10 text-center">
+                            {reloadCountdown !== null ? (
+                                <div className="text-destructive">
+                                    <p className="mb-1 text-[10px] font-black tracking-[0.2em] uppercase opacity-70">
+                                        {t('exam.take.securityImminent')}
+                                    </p>
+                                    <p className="text-7xl leading-none font-black">
+                                        {reloadCountdown}
                                     </p>
                                 </div>
+                            ) : (
+                                <MaximizeIcon className="size-16 animate-pulse text-destructive" />
                             )}
 
+                            <div className="space-y-2">
+                                <h2 className="text-xl font-bold tracking-tight">
+                                    {isLocked
+                                        ? t('exam.take.locked').toUpperCase()
+                                        : t(
+                                              'exam.take.fullscreenRequired',
+                                          ).toUpperCase()}
+                                </h2>
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    {isLocked
+                                        ? lockReason
+                                        : t('exam.take.fullscreenDesc')}
+                                </p>
+                            </div>
+
                             <Button
-                                type="button"
-                                onClick={isLocked ? returnToExam : enterFullscreen}
-                                className="w-full"
+                                onClick={
+                                    isLocked ? returnToExam : enterFullscreen
+                                }
+                                className="h-14 w-full text-lg font-black uppercase shadow-lg"
+                                variant="destructive"
                                 size="lg"
                             >
                                 <MaximizeIcon className="mr-2 size-5" />
-                                {isLocked ? t('exam.take.return') : t('exam.take.enterFullscreen')}
+                                {isLocked
+                                    ? t('exam.take.return')
+                                    : t('exam.take.enterFullscreen')}
                             </Button>
                         </CardContent>
                     </Card>
@@ -509,96 +679,79 @@ export default function TakeExam({
         <>
             <Head title={`${exam.title}`} />
             <div className="flex min-h-screen flex-col bg-background select-none">
-                {/* Blocking Overlay - shown when exam is locked */}
-                {isLocked && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
-                        <Card className="w-full max-w-lg border-red-500/50 shadow-2xl">
-                            <CardHeader className="text-center pb-2">
-                                <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-red-100 ring-8 ring-red-50">
-                                    <ShieldAlertIcon className="size-8 text-red-600" />
-                                </div>
-                                <CardTitle className="text-2xl font-black text-red-600 uppercase tracking-tight">
-                                    {t('exam.take.locked').toUpperCase()}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="rounded-lg bg-muted p-4 border border-border">
-                                    <h3 className="text-sm font-bold flex items-center gap-2 mb-3 text-foreground">
-                                        <AlertTriangleIcon className="size-4 text-amber-500" />
-                                        {t('exam.take.beforeYouBegin')}
-                                    </h3>
-                                    <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                                        <li>{t('exam.take.rule1')}</li>
-                                        <li>{t('exam.take.rule2')}</li>
-                                        <li>{t('exam.take.rule3')}</li>
-                                        <li>{t('exam.take.rule4')}</li>
-                                    </ul>
-                                </div>
-
-                                {reloadCountdown !== null && (
-                                    <div className="rounded-xl bg-red-600 p-4 text-white text-center shadow-lg animate-pulse border-2 border-red-400">
-                                        <p className="text-xs uppercase font-black tracking-widest opacity-80 mb-1">
-                                            {t('exam.take.securityImminent')}
-                                        </p>
-                                        <p className="text-xl font-black">
-                                            {t('exam.take.returnWithin', [reloadCountdown]).toUpperCase()}
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div className="space-y-3 pt-2">
-                                    <Button
-                                        onClick={returnToExam}
-                                        className="w-full h-14 text-lg font-bold shadow-lg"
-                                        size="lg"
-                                        variant="destructive"
-                                    >
-                                        <MaximizeIcon className="mr-2 size-6" />
-                                        {t('exam.take.return').toUpperCase()}
-                                    </Button>
-                                    <p className="text-center text-xs text-muted-foreground font-medium">
-                                        {lockReason}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
-
                 {/* Header */}
-                <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md px-4 py-2 sm:py-3">
+                <header className="sticky top-0 z-40 border-b bg-background/80 px-4 py-2 backdrop-blur-md sm:py-3">
                     <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-                        <div className="flex flex-1 items-center gap-2 min-w-0">
-                            <h1 className="font-bold truncate text-sm sm:text-base">{exam.title}</h1>
-                            <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <h1 className="truncate text-sm font-bold sm:text-base">
+                                {exam.title}
+                            </h1>
+
+                            <div className="ml-1 hidden items-center gap-3 border-l border-border/50 pl-3 sm:flex">
+                                <div className="flex shrink-0 items-center gap-1.5">
+                                    <div
+                                        className={cn(
+                                            'size-2 rounded-full',
+                                            connectionStatus === 'stable'
+                                                ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                                                : connectionStatus ===
+                                                    'unstable'
+                                                    ? 'animate-pulse bg-amber-500'
+                                                    : 'animate-ping bg-rose-500',
+                                        )}
+                                    />
+                                    <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase italic">
+                                        {connectionStatus === 'stable'
+                                            ? t('exam.take.status.live')
+                                            : connectionStatus === 'unstable'
+                                                ? t(
+                                                    'exam.take.status.reconnecting',
+                                                )
+                                                : t('exam.take.status.offline')}
+                                    </span>
+                                </div>
+
                                 {saving && (
-                                    <div className="flex size-5 items-center justify-center text-blue-500 animate-pulse" title={t('exam.take.saving')}>
-                                        <SaveIcon className="size-4" />
+                                    <div className="flex animate-pulse items-center gap-1.5 text-blue-500">
+                                        <SaveIcon className="size-3.5" />
+                                        <span className="text-[10px] font-black tracking-widest uppercase italic">
+                                            {t('exam.take.saving')}
+                                        </span>
                                     </div>
                                 )}
                                 {saveError && (
-                                    <div className="flex size-5 items-center justify-center text-rose-500" title={t('exam.take.errorSaving')}>
-                                        <AlertTriangleIcon className="size-4" />
+                                    <div className="flex items-center gap-1.5 text-rose-500">
+                                        <AlertTriangleIcon className="size-3.5" />
+                                        <span className="text-[10px] font-black tracking-widest uppercase italic">
+                                            {t('exam.take.errorSaving')}
+                                        </span>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex shrink-0 items-center gap-3">
                             {violationCount > 0 && (
-                                <Badge variant="destructive" className="h-7 px-2 text-[10px] font-black uppercase tracking-wider">
+                                <Badge
+                                    variant="destructive"
+                                    className="h-7 px-2 text-[10px] font-black tracking-wider uppercase"
+                                >
                                     <ShieldAlertIcon className="mr-1 size-3" />
-                                    <span className="hidden xs:inline">{violationCount} {t('exam.violations')}</span>
-                                    <span className="xs:hidden">{violationCount}</span>
+                                    <span className="xs:inline hidden">
+                                        {violationCount} {t('exam.violations')}
+                                    </span>
+                                    <span className="xs:hidden">
+                                        {violationCount}
+                                    </span>
                                 </Badge>
                             )}
 
                             <div
                                 className={cn(
-                                    "flex items-center gap-2 rounded-[0.6rem] px-3 py-1.5 font-black text-sm transition-colors",
+                                    'flex items-center gap-2 rounded-[0.6rem] px-3 py-1.5 text-sm font-black transition-colors',
                                     isLowTime
                                         ? 'animate-pulse bg-destructive/10 text-destructive ring-2 ring-destructive/20'
-                                        : 'bg-muted text-foreground border border-border'
+                                        : 'border border-border bg-muted text-foreground',
                                 )}
                             >
                                 <ClockIcon className="size-4" />
@@ -609,7 +762,7 @@ export default function TakeExam({
                                 data-test="header-submit-button"
                                 size="sm"
                                 onClick={handleSubmit}
-                                className="hidden sm:flex h-9 rounded-xl font-black uppercase tracking-widest text-[10px] bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+                                className="hidden h-9 rounded-xl bg-primary text-[10px] font-black tracking-widest uppercase shadow-md shadow-primary/20 hover:bg-primary/90 sm:flex"
                             >
                                 <SendIcon className="size-3.5" />
                                 {t('exam.take.submit')}
@@ -617,21 +770,24 @@ export default function TakeExam({
                         </div>
                     </div>
                     {/* Progress Bar */}
-                    <div className="absolute bottom-0 left-0 h-[2px] bg-muted w-full overflow-hidden">
+                    <div className="absolute bottom-0 left-0 h-[2px] w-full overflow-hidden bg-muted">
                         <div
                             className="h-full bg-primary transition-all duration-500 ease-out"
-                            style={{ width: `${(answeredCount / questions.length) * 100}%` }}
+                            style={{
+                                width: `${(answeredCount / questions.length) * 100}%`,
+                            }}
                         />
                     </div>
                 </header>
 
-                <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:flex-row pb-24 md:pb-0">
+                <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col pb-24 md:flex-row md:pb-0">
                     {/* Question Navigation Sidebar */}
                     <aside className="w-full border-b bg-muted/20 p-4 md:w-64 md:border-r md:border-b-0">
                         <div className="sticky top-20">
                             <div className="mb-4">
                                 <p className="text-sm text-muted-foreground">
-                                    {t('exam.take.answered')}: {answeredCount}/{questions.length}
+                                    {t('exam.take.answered')}: {answeredCount}/
+                                    {questions.length}
                                 </p>
                             </div>
                             <div className="grid grid-cols-5 gap-2 md:grid-cols-4">
@@ -652,10 +808,10 @@ export default function TakeExam({
                                                 setCurrentIndex(index)
                                             }
                                             className={`relative flex h-10 items-center justify-center rounded text-sm font-medium transition-colors ${isCurrent
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : isAnswered
-                                                        ? 'bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500/30'
-                                                        : 'bg-muted hover:bg-muted/80'
+                                                ? 'bg-primary text-primary-foreground'
+                                                : isAnswered
+                                                    ? 'bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500/30'
+                                                    : 'bg-muted hover:bg-muted/80'
                                                 }`}
                                         >
                                             {index + 1}
@@ -667,7 +823,7 @@ export default function TakeExam({
                                 })}
                             </div>
 
-                            <div className="mt-4 hidden space-y-2 border-t pt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground md:block">
+                            <div className="mt-4 hidden space-y-2 border-t pt-4 text-[10px] font-black tracking-widest text-muted-foreground uppercase md:block">
                                 <div className="flex items-center gap-2">
                                     <span className="h-3 w-3 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30" />
                                     <span>{t('exam.take.answered')}</span>
@@ -689,14 +845,23 @@ export default function TakeExam({
                         {currentQuestion && (
                             <Card className="mx-auto max-w-3xl">
                                 <CardHeader>
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="mb-4 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="bg-muted border-border text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
-                                                {t('exam.take.question')} {currentIndex + 1} {t('exam.of')}{' '}
+                                            <Badge
+                                                variant="outline"
+                                                className="border-border bg-muted text-[10px] font-bold tracking-tight text-muted-foreground uppercase"
+                                            >
+                                                {t('exam.take.question')}{' '}
+                                                {currentIndex + 1}{' '}
+                                                {t('exam.of')}{' '}
                                                 {questions.length}
                                             </Badge>
-                                            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none text-[10px] font-bold shadow-sm px-2">
-                                                {currentQuestion.points} {t('exam.points')}
+                                            <Badge
+                                                variant="secondary"
+                                                className="border-none bg-primary/10 px-2 text-[10px] font-bold text-primary shadow-sm hover:bg-primary/20"
+                                            >
+                                                {currentQuestion.points}{' '}
+                                                {t('exam.points')}
                                             </Badge>
                                         </div>
                                         <Button
@@ -706,19 +871,26 @@ export default function TakeExam({
                                                 toggleFlag(currentQuestion.id)
                                             }
                                             className={cn(
-                                                "h-8 rounded-lg text-xs font-bold",
-                                                flagged.has(currentQuestion.id) ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700' : 'text-muted-foreground hover:bg-muted'
+                                                'h-8 rounded-lg text-xs font-bold',
+                                                flagged.has(currentQuestion.id)
+                                                    ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700'
+                                                    : 'text-muted-foreground hover:bg-muted',
                                             )}
                                         >
                                             <FlagIcon
-                                                className={cn("size-3.5 mr-1.5", flagged.has(currentQuestion.id) && "fill-amber-500")}
+                                                className={cn(
+                                                    'mr-1.5 size-3.5',
+                                                    flagged.has(
+                                                        currentQuestion.id,
+                                                    ) && 'fill-amber-500',
+                                                )}
                                             />
                                             {flagged.has(currentQuestion.id)
                                                 ? t('exam.take.unflag')
                                                 : t('exam.take.flag')}
                                         </Button>
                                     </div>
-                                    <CardTitle className="text-lg">
+                                    <CardTitle className="text-lg break-words whitespace-pre-wrap">
                                         {currentQuestion.content}
                                     </CardTitle>
                                 </CardHeader>
@@ -731,24 +903,46 @@ export default function TakeExam({
                                                     (option) => (
                                                         <div
                                                             key={option.id}
-                                                            onClick={() => handleSingleChoice(option.id)}
+                                                            onClick={() =>
+                                                                handleSingleChoice(
+                                                                    option.id,
+                                                                )
+                                                            }
                                                             className={cn(
-                                                                "flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all duration-200",
-                                                                currentAnswer?.selected_options?.includes(option.id)
+                                                                'flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all duration-200 min-w-0',
+                                                                currentAnswer?.selected_options?.includes(
+                                                                    option.id,
+                                                                )
                                                                     ? 'border-primary bg-primary/5 shadow-sm'
-                                                                    : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'
+                                                                    : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20',
                                                             )}
                                                         >
-                                                            <div className={cn(
-                                                                "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors",
-                                                                currentAnswer?.selected_options?.includes(option.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border"
-                                                            )}>
-                                                                {currentAnswer?.selected_options?.includes(option.id) && <div className="size-2 rounded-full bg-primary-foreground shadow-sm" />}
+                                                            <div
+                                                                className={cn(
+                                                                    'flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors',
+                                                                    currentAnswer?.selected_options?.includes(
+                                                                        option.id,
+                                                                    )
+                                                                        ? 'border-primary bg-primary text-primary-foreground'
+                                                                        : 'border-border bg-card',
+                                                                )}
+                                                            >
+                                                                {currentAnswer?.selected_options?.includes(
+                                                                    option.id,
+                                                                ) && (
+                                                                        <div className="size-2 rounded-full bg-primary-foreground shadow-sm" />
+                                                                    )}
                                                             </div>
-                                                            <span className={cn(
-                                                                "text-sm font-bold transition-colors",
-                                                                currentAnswer?.selected_options?.includes(option.id) ? "text-primary" : "text-foreground"
-                                                            )}>
+                                                            <span
+                                                                className={cn(
+                                                                    'text-sm font-bold transition-colors break-words whitespace-pre-wrap flex-1 min-w-0',
+                                                                    currentAnswer?.selected_options?.includes(
+                                                                        option.id,
+                                                                    )
+                                                                        ? 'text-primary'
+                                                                        : 'text-foreground',
+                                                                )}
+                                                            >
                                                                 {option.content}
                                                             </span>
                                                         </div>
@@ -761,33 +955,67 @@ export default function TakeExam({
                                     {currentQuestion.type ===
                                         'multiple_choice_multiple' && (
                                             <div className="space-y-3">
-                                                <p className="text-sm font-semibold text-muted-foreground mb-2">
+                                                <p className="mb-2 text-sm font-semibold text-muted-foreground">
                                                     {t('exam.take.selectMultiple')}
                                                 </p>
                                                 {currentQuestion.options.map(
                                                     (option) => (
                                                         <div
                                                             key={option.id}
-                                                            onClick={() => handleMultipleChoice(option.id, !(currentAnswer?.selected_options?.includes(option.id)))}
+                                                            onClick={() =>
+                                                                handleMultipleChoice(
+                                                                    option.id,
+                                                                    !currentAnswer?.selected_options?.includes(
+                                                                        option.id,
+                                                                    ),
+                                                                )
+                                                            }
                                                             className={cn(
-                                                                "flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all duration-200",
-                                                                currentAnswer?.selected_options?.includes(option.id)
+                                                                'flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all duration-200 min-w-0',
+                                                                currentAnswer?.selected_options?.includes(
+                                                                    option.id,
+                                                                )
                                                                     ? 'border-primary bg-primary/5 shadow-sm'
-                                                                    : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'
+                                                                    : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20',
                                                             )}
                                                         >
-                                                            <div className={cn(
-                                                                "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors",
-                                                                currentAnswer?.selected_options?.includes(option.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border"
-                                                            )}>
-                                                                {currentAnswer?.selected_options?.includes(option.id) && (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="size-3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                            <div
+                                                                className={cn(
+                                                                    'flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors',
+                                                                    currentAnswer?.selected_options?.includes(
+                                                                        option.id,
+                                                                    )
+                                                                        ? 'border-primary bg-primary text-primary-foreground'
+                                                                        : 'border-border bg-card',
                                                                 )}
+                                                            >
+                                                                {currentAnswer?.selected_options?.includes(
+                                                                    option.id,
+                                                                ) && (
+                                                                        <svg
+                                                                            xmlns="http://www.w3.org/2000/svg"
+                                                                            viewBox="0 0 24 24"
+                                                                            fill="none"
+                                                                            stroke="currentColor"
+                                                                            strokeWidth="4"
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            className="size-3"
+                                                                        >
+                                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                                        </svg>
+                                                                    )}
                                                             </div>
-                                                            <span className={cn(
-                                                                "text-sm font-bold transition-colors",
-                                                                currentAnswer?.selected_options?.includes(option.id) ? "text-primary" : "text-foreground"
-                                                            )}>
+                                                            <span
+                                                                className={cn(
+                                                                    'text-sm font-bold transition-colors break-words whitespace-pre-wrap flex-1 min-w-0',
+                                                                    currentAnswer?.selected_options?.includes(
+                                                                        option.id,
+                                                                    )
+                                                                        ? 'text-primary'
+                                                                        : 'text-foreground',
+                                                                )}
+                                                            >
                                                                 {option.content}
                                                             </span>
                                                         </div>
@@ -803,9 +1031,9 @@ export default function TakeExam({
                                                 <label
                                                     key={value}
                                                     className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border p-4 transition-colors ${currentAnswer?.text_answer ===
-                                                            value
-                                                            ? 'border-primary bg-primary/5'
-                                                            : 'hover:bg-muted/50'
+                                                        value
+                                                        ? 'border-primary bg-primary/5'
+                                                        : 'hover:bg-muted/50'
                                                         }`}
                                                 >
                                                     <input
@@ -823,7 +1051,9 @@ export default function TakeExam({
                                                         className="size-4"
                                                     />
                                                     <span className="font-medium capitalize">
-                                                        {t(`exams.questions.${value}` as any)}
+                                                        {t(
+                                                            `exams.questions.${value}` as any,
+                                                        )}
                                                     </span>
                                                 </label>
                                             ))}
@@ -840,7 +1070,9 @@ export default function TakeExam({
                                             onChange={(e) =>
                                                 handleTextAnswer(e.target.value)
                                             }
-                                            placeholder={t('exam.take.shortTextPlaceholder')}
+                                            placeholder={t(
+                                                'exam.take.shortTextPlaceholder',
+                                            )}
                                             className="w-full rounded-lg border p-4 text-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary"
                                         />
                                     )}
@@ -854,7 +1086,9 @@ export default function TakeExam({
                                             onChange={(e) =>
                                                 handleTextAnswer(e.target.value)
                                             }
-                                            placeholder={t('exam.take.essayPlaceholder')}
+                                            placeholder={t(
+                                                'exam.take.essayPlaceholder',
+                                            )}
                                             className="w-full text-lg"
                                         />
                                     )}
@@ -866,7 +1100,7 @@ export default function TakeExam({
                         <div className="mx-auto mt-8 hidden max-w-3xl items-center justify-between md:flex">
                             <Button
                                 variant="outline"
-                                className="h-11 px-6 rounded-xl font-bold border-2 border-border hover:bg-muted"
+                                className="h-11 rounded-xl border-2 border-border px-6 font-bold hover:bg-muted"
                                 onClick={() =>
                                     setCurrentIndex(
                                         Math.max(0, currentIndex - 1),
@@ -874,26 +1108,26 @@ export default function TakeExam({
                                 }
                                 disabled={currentIndex === 0}
                             >
-                                <ChevronLeftIcon className="size-4 mr-2" />
+                                <ChevronLeftIcon className="mr-2 size-4" />
                                 {t('exam.take.previous')}
                             </Button>
 
                             {currentIndex < questions.length - 1 ? (
                                 <Button
-                                    className="h-11 px-8 rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+                                    className="h-11 rounded-xl bg-primary px-8 font-bold shadow-md shadow-primary/20 hover:bg-primary/90"
                                     onClick={() =>
                                         setCurrentIndex(currentIndex + 1)
                                     }
                                 >
                                     {t('exam.take.next')}
-                                    <ChevronRightIcon className="size-4 ml-2" />
+                                    <ChevronRightIcon className="ml-2 size-4" />
                                 </Button>
                             ) : (
                                 <Button
-                                    className="h-11 px-8 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20"
+                                    className="h-11 rounded-xl bg-emerald-600 px-8 font-bold shadow-md shadow-emerald-600/20 hover:bg-emerald-500"
                                     onClick={handleSubmit}
                                 >
-                                    <SendIcon className="size-4 mr-2" />
+                                    <SendIcon className="mr-2 size-4" />
                                     {t('exam.take.submit')}
                                 </Button>
                             )}
@@ -902,28 +1136,37 @@ export default function TakeExam({
                 </div>
 
                 {/* Sticky Bottom Navigation (Mobile Only) */}
-                <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-card/95 backdrop-blur-md border-t border-border p-4 pb-6 shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
+                <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-border bg-card/95 p-4 pb-6 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] backdrop-blur-md md:hidden">
                     <div className="flex items-center gap-3">
                         <Button
                             variant="outline"
-                            className="size-12 p-0 flex items-center justify-center rounded-2xl border-2 border-border"
-                            onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                            className="flex size-12 items-center justify-center rounded-2xl border-2 border-border p-0"
+                            onClick={() =>
+                                setCurrentIndex(Math.max(0, currentIndex - 1))
+                            }
                             disabled={currentIndex === 0}
                         >
                             <ChevronLeftIcon className="size-6 text-muted-foreground" />
                         </Button>
 
-                        <div className="flex-1 flex flex-col items-center justify-center -mt-1">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">
-                                {t('exam.take.questionStatus', [currentIndex + 1, questions.length])}
+                        <div className="-mt-1 flex flex-1 flex-col items-center justify-center">
+                            <div className="mb-1 text-[10px] font-black tracking-widest text-muted-foreground uppercase">
+                                {t('exam.take.questionStatus', [
+                                    currentIndex + 1,
+                                    questions.length,
+                                ])}
                             </div>
-                            <div className="flex items-center gap-1.5 overflow-hidden w-full max-w-[100px] h-1.5 bg-muted rounded-full">
+                            <div className="flex h-1.5 w-full max-w-[100px] items-center gap-1.5 overflow-hidden rounded-full bg-muted">
                                 {questions.map((_, i) => (
                                     <div
                                         key={i}
                                         className={cn(
-                                            "h-full flex-1 transition-all",
-                                            i === currentIndex ? "bg-primary" : (answers[questions[i].id] ? "bg-emerald-500" : "bg-muted-foreground/30")
+                                            'h-full flex-1 transition-all',
+                                            i === currentIndex
+                                                ? 'bg-primary'
+                                                : answers[questions[i].id]
+                                                    ? 'bg-emerald-500'
+                                                    : 'bg-muted-foreground/30',
                                         )}
                                     />
                                 ))}
@@ -932,18 +1175,20 @@ export default function TakeExam({
 
                         {currentIndex < questions.length - 1 ? (
                             <Button
-                                className="h-12 flex-1 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-foreground text-background border-none shadow-lg shadow-foreground/10"
-                                onClick={() => setCurrentIndex(currentIndex + 1)}
+                                className="h-12 flex-1 rounded-2xl border-none bg-foreground text-[11px] font-black tracking-widest text-background uppercase shadow-lg shadow-foreground/10"
+                                onClick={() =>
+                                    setCurrentIndex(currentIndex + 1)
+                                }
                             >
                                 {t('exam.take.next')}
-                                <ChevronRightIcon className="size-4 ml-2" />
+                                <ChevronRightIcon className="ml-2 size-4" />
                             </Button>
                         ) : (
                             <Button
-                                className="h-12 flex-1 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-emerald-600 border-none shadow-lg shadow-emerald-600/10"
+                                className="h-12 flex-1 rounded-2xl border-none bg-emerald-600 text-[11px] font-black tracking-widest uppercase shadow-lg shadow-emerald-600/10"
                                 onClick={handleSubmit}
                             >
-                                <SendIcon className="size-4 mr-2" />
+                                <SendIcon className="mr-2 size-4" />
                                 {t('exam.take.submit')}
                             </Button>
                         )}
@@ -967,14 +1212,20 @@ export default function TakeExam({
                     </DialogHeader>
                     <div className="py-4">
                         <p className="text-sm text-muted-foreground">
-                            {t('exam.take.confirmStats', [answeredCount, questions.length])}
+                            {t('exam.take.confirmStats', [
+                                answeredCount,
+                                questions.length,
+                            ])}
                         </p>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={handleCancelSubmit}>
                             {t('common.cancel')}
                         </Button>
-                        <Button data-test="confirm-submit-button" onClick={handleConfirmSubmit}>
+                        <Button
+                            data-test="confirm-submit-button"
+                            onClick={handleConfirmSubmit}
+                        >
                             {t('exam.take.submit')}
                         </Button>
                     </DialogFooter>

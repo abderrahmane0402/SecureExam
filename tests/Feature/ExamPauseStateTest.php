@@ -35,6 +35,7 @@ it('includes is_paused in the take view props', function () {
 });
 
 it('includes is_paused in the heartbeat response', function () {
+    Event::fake();
     $student = User::factory()->create(['role' => 'student']);
     $exam = Exam::factory()->create();
     $attempt = ExamAttempt::factory()->create([
